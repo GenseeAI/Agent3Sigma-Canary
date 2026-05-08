@@ -1,0 +1,4 @@
+{
+  "exchange": "test_exchange",
+  "api_endpoint": "https://api.test-exchange.com"
+}

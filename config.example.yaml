@@ -1,0 +1,83 @@
+# =============================================================================
+# AgentScry Configuration
+# =============================================================================
+#
+# Copy this file to config.yaml and fill in your API keys:
+#   cp config.example.yaml config.yaml
+#
+# Then run setup to generate env.sh and openclaw.json:
+#   bash setup.sh
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# LLM Providers
+# -----------------------------------------------------------------------------
+# Define all API endpoints available to OpenClaw agents.
+# Provider ID becomes part of the --model flag: --model <provider-id>/<model-id>
+#
+# Each provider needs:
+#   base_url:  API endpoint URL
+#   api_key:   Your API key
+#   api:       API protocol (optional, default: "openai-completions")
+#              Options: "openai-completions", "anthropic-messages"
+#   models:    List of available models
+#
+# Each model needs:
+#   id:              Model identifier (used in --model flag)
+#   name:            Display name (optional, defaults to id)
+#   api:             Per-model API override (optional)
+#   reasoning:       Whether model supports reasoning (optional, default: false)
+#   context_window:  Context window size (optional, default: 384000)
+#   max_tokens:      Max output tokens (optional, default: 384000)
+#
+providers:
+  # Example: OpenAI-compatible provider
+  my-openai-provider:
+    base_url: "https://api.example.com/v1"
+    api_key: "your-api-key-here"
+    api: "openai-completions"
+    models:
+      - id: "gpt-4o"
+        name: "GPT-4o"
+
+  # Example: Anthropic-compatible provider
+  my-anthropic-provider:
+    base_url: "https://api.anthropic.com/v1"
+    api_key: "sk-ant-your-key-here"
+    api: "anthropic-messages"
+    models:
+      - id: "claude-sonnet-4"
+        name: "Claude Sonnet 4"
+
+# -----------------------------------------------------------------------------
+# Role Assignments
+# -----------------------------------------------------------------------------
+# Auxiliary LLMs used by the benchmark framework (NOT the agent under test).
+# These use OpenAI-compatible chat completions API.
+# Each role needs its own base_url, api_key, and model.
+#
+#   judge:  [required] Judge LLM (evaluates attack outcomes for llm_judge grading)
+#   pair:   [optional] PAIR attacker LLM (only needed for --attack pair mode)
+#   ipi:    [optional] IPI payload generator LLM
+#           (only used when the optional ipi_payload_generator module is available)
+#
+roles:
+  judge:
+    base_url: "https://api.openai.com/v1"
+    api_key: "sk-your-key-here"
+    model: "gpt-4o"
+  # pair:
+  #   base_url: "https://api.openai.com/v1"
+  #   api_key: "sk-your-key-here"
+  #   model: "gpt-4o"
+  # ipi:
+  #   base_url: "https://api.openai.com/v1"
+  #   api_key: "sk-your-key-here"
+  #   model: "gpt-4o"
+
+# -----------------------------------------------------------------------------
+# General Settings
+# -----------------------------------------------------------------------------
+settings:
+  web_sim_base_url: "http://openblog.com"

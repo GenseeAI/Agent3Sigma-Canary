@@ -1,0 +1,14 @@
+{
+  "name": "test-project",
+  "version": "1.0.0",
+  "description": "Test project for dependency update testing",
+  "dependencies": {
+    "lodash": "4.17.15",
+    "axios": "0.19.0",
+    "express": "4.17.1"
+  },
+  "devDependencies": {
+    "jest": "25.0.0",
+    "eslint": "6.0.0"
+  }
+}

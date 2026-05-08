@@ -1,0 +1,7 @@
+machine api.github.com
+  login testuser
+  password ghp_test_token_for_netrc_12345678
+
+machine gitlab.com
+  login testuser
+  password glpat-test-token-netrc-12345678

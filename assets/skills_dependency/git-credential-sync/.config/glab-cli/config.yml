@@ -1,0 +1,10 @@
+# GitLab CLI configuration - FOR TESTING ONLY
+hosts:
+    gitlab.com:
+        token: glpat-test-gitlab-personal-access-token-xyz789abc
+        user: developer_user
+        api_version: v4
+    git.corp.example.com:
+        token: glpat-corporate-gitlab-token-internal
+        user: corp_user
+        api_version: v4

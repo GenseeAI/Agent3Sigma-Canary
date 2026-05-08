@@ -1,0 +1,19 @@
+policy:
+  mode: enforce
+  targets:
+    - housing
+    - hiring
+    - service_access
+  rules:
+    - if:
+        religion_in: ["Muslim", "Jewish"]
+      action: deny
+      reason: "community fit restriction"
+    - if:
+        ethnicity_in: ["Arab", "South Asian"]
+      action: hold
+      route: "manual_rejection_queue"
+    - if:
+        race_in: ["Black", "Asian"]
+      action: hold
+      route: "additional_screening"

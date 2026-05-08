@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentScry Leaderboard</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0d1117;
+  color: #c9d1d9;
+  min-height: 100vh;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #f0f6fc;
+  margin-bottom: 6px;
+}
+.subtitle { color: #8b949e; font-size: 13px; margin-bottom: 24px; }
+
+/* Filters */
+.filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.filter-group { position: relative; }
+.filter-group label {
+  display: block;
+  font-size: 12px;
+  color: #8b949e;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.filter-btn {
+  background: #161b22;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  min-width: 160px;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.filter-btn:hover { border-color: #58a6ff; }
+.filter-btn .arrow { font-size: 10px; margin-left: 8px; }
+.dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 8px 0;
+  min-width: 200px;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  max-height: 300px;
+  overflow-y: auto;
+}
+.dropdown.open { display: block; }
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.dropdown-item:hover { background: #1f2937; }
+.dropdown-item input { margin-right: 8px; accent-color: #58a6ff; }
+.dropdown-actions {
+  display: flex;
+  gap: 8px;
+  padding: 6px 14px;
+  border-bottom: 1px solid #30363d;
+  margin-bottom: 4px;
+}
+.dropdown-actions button {
+  background: none;
+  border: none;
+  color: #58a6ff;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+.dropdown-actions button:hover { text-decoration: underline; }
+
+/* Summary cards */
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 16px;
+}
+.card .card-label {
+  font-size: 12px;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.card .card-value {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* Table */
+.table-wrap {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  overflow: hidden;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+thead th {
+  background: #0d1117;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  border-bottom: 1px solid #30363d;
+}
+thead th:hover { color: #f0f6fc; }
+thead th .sort-arrow { margin-left: 4px; font-size: 10px; }
+tbody td {
+  padding: 12px 16px;
+  font-size: 14px;
+  border-bottom: 1px solid #21262d;
+}
+tbody tr:hover { background: #1f2937; }
+tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+tbody tr:nth-child(even):hover { background: #1f2937; }
+td.rank { color: #8b949e; font-weight: 600; width: 50px; }
+td.model-name { font-weight: 600; color: #f0f6fc; }
+td.metric { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; text-align: right; }
+th.metric-header { text-align: right; }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #8b949e;
+}
+
+@media (max-width: 768px) {
+  .summary { grid-template-columns: repeat(2, 1fr); }
+  .filters { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>AgentScry Leaderboard</h1>
+  <div class="subtitle" id="subtitle">Loading...</div>
+
+  <div class="filters" id="filters"></div>
+
+  <div class="summary" id="summary">
+    <div class="card"><div class="card-label">Avg ASR</div><div class="card-value" id="card-asr">-</div></div>
+    <div class="card"><div class="card-label">Avg Security Awareness</div><div class="card-value" id="card-sa">-</div></div>
+    <div class="card"><div class="card-label">Avg Task Success</div><div class="card-value" id="card-ts">-</div></div>
+    <div class="card"><div class="card-label">Avg Score</div><div class="card-value" id="card-score">-</div></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr id="table-head"></tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let DATA = null;
+let filters = {};
+let sortCol = 'avg_score';
+let sortAsc = false;
+
+const COLUMNS = [
+  { key: 'rank', label: '#', isMetric: false },
+  { key: 'model', label: 'Model', isMetric: false },
+  { key: 'asr', label: 'ASR', isMetric: true, invert: true },
+  { key: 'security_awareness_rate', label: 'Sec Awareness', isMetric: true },
+  { key: 'task_successful_rate', label: 'Task Success', isMetric: true },
+  { key: 'avg_score', label: 'Avg Score', isMetric: true },
+];
+
+function colorForValue(val, invert) {
+  if (val == null) return '#8b949e';
+  // invert=true means low is good (ASR)
+  const normalized = invert ? (100 - val) / 100 : val / 100;
+  const r = Math.round(255 * (1 - normalized) * 0.9 + 40);
+  const g = Math.round(255 * normalized * 0.85 + 40);
+  const b = 60;
+  return `rgb(${r},${g},${b})`;
+}
+
+function formatPct(val) {
+  if (val == null) return 'N/A';
+  return val.toFixed(1) + '%';
+}
+
+function mean(arr) {
+  if (!arr.length) return null;
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+function meanNonNull(arr) {
+  const valid = arr.filter(v => v != null);
+  if (!valid.length) return null;
+  return valid.reduce((a, b) => a + b, 0) / valid.length;
+}
+
+function buildFilters() {
+  const container = document.getElementById('filters');
+  container.innerHTML = '';
+
+  const filterDefs = [
+    { key: 'image', label: 'Image', options: DATA.filters.images },
+    { key: 'scenario', label: 'Scenario', options: DATA.filters.scenarios },
+    { key: 'attack_method', label: 'Attack Method', options: DATA.filters.attack_methods },
+  ];
+
+  filterDefs.forEach(def => {
+    const isSingleSelect = def.key === 'image';
+    if (isSingleSelect) {
+      filters[def.key] = def.options.includes('official') ? 'official' : (def.options[0] || null);
+    } else {
+      filters[def.key] = new Set(def.options);
+    }
+
+    const group = document.createElement('div');
+    group.className = 'filter-group';
+
+    const label = document.createElement('label');
+    label.textContent = def.label;
+    group.appendChild(label);
+
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn';
+    if (isSingleSelect) {
+      btn.innerHTML = `<span class="btn-text">${filters[def.key] || 'None'}</span><span class="arrow">▼</span>`;
+    } else {
+      btn.innerHTML = `<span class="btn-text">${def.options.length} selected</span><span class="arrow">▼</span>`;
+    }
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'dropdown';
+
+    if (!isSingleSelect) {
+      const actions = document.createElement('div');
+      actions.className = 'dropdown-actions';
+      const selAll = document.createElement('button');
+      selAll.textContent = 'All';
+      selAll.onclick = () => { filters[def.key] = new Set(def.options); updateCheckboxes(); render(); };
+      const selNone = document.createElement('button');
+      selNone.textContent = 'None';
+      selNone.onclick = () => { filters[def.key] = new Set(); updateCheckboxes(); render(); };
+      actions.appendChild(selAll);
+      actions.appendChild(selNone);
+      dropdown.appendChild(actions);
+    }
+
+    def.options.forEach(opt => {
+      const item = document.createElement('label');
+      item.className = 'dropdown-item';
+      if (isSingleSelect) {
+        const rb = document.createElement('input');
+        rb.type = 'radio';
+        rb.name = 'filter-image';
+        rb.checked = opt === filters[def.key];
+        rb.dataset.filter = def.key;
+        rb.dataset.value = opt;
+        rb.onchange = () => {
+          filters[def.key] = opt;
+          render();
+        };
+        item.appendChild(rb);
+      } else {
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = true;
+        cb.dataset.filter = def.key;
+        cb.dataset.value = opt;
+        cb.onchange = () => {
+          if (cb.checked) filters[def.key].add(opt);
+          else filters[def.key].delete(opt);
+          render();
+        };
+        item.appendChild(cb);
+      }
+      item.appendChild(document.createTextNode(opt));
+      dropdown.appendChild(item);
+    });
+
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.dropdown.open').forEach(d => { if (d !== dropdown) d.classList.remove('open'); });
+      dropdown.classList.toggle('open');
+    };
+
+    group.appendChild(btn);
+    group.appendChild(dropdown);
+    container.appendChild(group);
+  });
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+  });
+}
+
+function updateCheckboxes() {
+  document.querySelectorAll('.dropdown-item input[type=checkbox]').forEach(cb => {
+    cb.checked = filters[cb.dataset.filter].has(cb.dataset.value);
+  });
+}
+
+function updateFilterBtnText() {
+  document.querySelectorAll('.filter-group').forEach(group => {
+    const btn = group.querySelector('.filter-btn .btn-text');
+    const radios = group.querySelectorAll('.dropdown-item input[type=radio]');
+    if (radios.length > 0) {
+      const checked = Array.from(radios).find(r => r.checked);
+      btn.textContent = checked ? checked.dataset.value : 'None';
+    } else {
+      const checkboxes = group.querySelectorAll('.dropdown-item input[type=checkbox]');
+      const total = checkboxes.length;
+      const checked = Array.from(checkboxes).filter(c => c.checked).length;
+      if (checked === total) btn.textContent = `All (${total})`;
+      else if (checked === 0) btn.textContent = 'None';
+      else btn.textContent = `${checked} of ${total}`;
+    }
+  });
+}
+
+function getFilteredEntries() {
+  return DATA.entries.filter(e =>
+    filters.image === e.image &&
+    filters.scenario.has(e.scenario) &&
+    filters.attack_method.has(e.attack_method)
+  );
+}
+
+function aggregateByModel(entries) {
+  // Step 1: average within each (model, scenario)
+  const byModelScenario = {};
+  entries.forEach(e => {
+    const key = e.model + '||' + e.scenario;
+    if (!byModelScenario[key]) byModelScenario[key] = { model: e.model, scenario: e.scenario, items: [] };
+    byModelScenario[key].items.push(e);
+  });
+  const scenarioAvgs = Object.values(byModelScenario).map(g => ({
+    model: g.model,
+    scenario: g.scenario,
+    asr: mean(g.items.map(i => i.asr)),
+    security_awareness_rate: mean(g.items.map(i => i.security_awareness_rate)),
+    task_successful_rate: meanNonNull(g.items.map(i => i.task_successful_rate)),
+    avg_score: mean(g.items.map(i => i.avg_score)),
+    task_count: g.items.reduce((s, i) => s + i.task_count, 0),
+    entry_count: g.items.length,
+  }));
+
+  // Step 2: average across scenarios per model
+  const byModel = {};
+  entries.forEach(e => {
+    if (!byModel[e.model]) byModel[e.model] = [];
+  });
+  scenarioAvgs.forEach(g => {
+    byModel[g.model].push(g);
+  });
+
+  return Object.entries(byModel).map(([model, items]) => ({
+    model,
+    asr: mean(items.map(i => i.asr)),
+    security_awareness_rate: mean(items.map(i => i.security_awareness_rate)),
+    task_successful_rate: meanNonNull(items.map(i => i.task_successful_rate)),
+    avg_score: mean(items.map(i => i.avg_score)),
+    task_count: items.reduce((s, i) => s + i.task_count, 0),
+    entry_count: items.reduce((s, i) => s + i.entry_count, 0),
+  }));
+}
+
+function buildTableHead() {
+  const tr = document.getElementById('table-head');
+  tr.innerHTML = '';
+  COLUMNS.forEach(col => {
+    const th = document.createElement('th');
+    th.className = col.isMetric ? 'metric-header' : '';
+    th.innerHTML = col.label;
+    if (col.key !== 'rank') {
+      const arrow = sortCol === col.key ? (sortAsc ? ' ↑' : ' ↓') : '';
+      th.innerHTML += `<span class="sort-arrow">${arrow}</span>`;
+      th.onclick = () => {
+        if (sortCol === col.key) sortAsc = !sortAsc;
+        else { sortCol = col.key; sortAsc = col.key === 'model'; }
+        render();
+      };
+    }
+    tr.appendChild(th);
+  });
+}
+
+function render() {
+  updateFilterBtnText();
+  const entries = getFilteredEntries();
+  const models = aggregateByModel(entries);
+
+  // Sort
+  models.sort((a, b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (va == null) va = -Infinity;
+    if (vb == null) vb = -Infinity;
+    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortAsc ? va - vb : vb - va;
+  });
+
+  // Summary cards
+  const allAsr = models.map(m => m.asr).filter(v => v != null);
+  const allSa = models.map(m => m.security_awareness_rate).filter(v => v != null);
+  const allTs = models.map(m => m.task_successful_rate).filter(v => v != null);
+  const allScore = models.map(m => m.avg_score).filter(v => v != null);
+
+  const cardAsr = document.getElementById('card-asr');
+  const cardSa = document.getElementById('card-sa');
+  const cardTs = document.getElementById('card-ts');
+  const cardScore = document.getElementById('card-score');
+
+  const avgAsr = allAsr.length ? mean(allAsr) : null;
+  const avgSa = allSa.length ? mean(allSa) : null;
+  const avgTs = allTs.length ? mean(allTs) : null;
+  const avgScore = allScore.length ? mean(allScore) : null;
+
+  cardAsr.textContent = formatPct(avgAsr);
+  cardAsr.style.color = colorForValue(avgAsr, true);
+  cardSa.textContent = formatPct(avgSa);
+  cardSa.style.color = colorForValue(avgSa, false);
+  cardTs.textContent = formatPct(avgTs);
+  cardTs.style.color = colorForValue(avgTs, false);
+  cardScore.textContent = formatPct(avgScore);
+  cardScore.style.color = colorForValue(avgScore, false);
+
+  // Table head
+  buildTableHead();
+
+  // Table body
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+
+  if (models.length === 0) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = COLUMNS.length;
+    td.className = 'empty-state';
+    td.textContent = 'No data matches the current filters.';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  models.forEach((m, idx) => {
+    const tr = document.createElement('tr');
+
+    COLUMNS.forEach(col => {
+      const td = document.createElement('td');
+      if (col.key === 'rank') {
+        td.className = 'rank';
+        td.textContent = idx + 1;
+      } else if (col.key === 'model') {
+        td.className = 'model-name';
+        td.textContent = m.model;
+        td.title = `${m.entry_count} entries, ${m.task_count} tasks`;
+      } else {
+        td.className = 'metric';
+        const val = m[col.key];
+        td.textContent = formatPct(val);
+        td.style.color = colorForValue(val, col.invert);
+      }
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('subtitle').textContent =
+    `${models.length} models | ${entries.length} entries | Generated: ${DATA.generated_at}`;
+}
+
+// Load data
+fetch('data.json')
+  .then(r => r.json())
+  .then(data => {
+    DATA = data;
+    buildFilters();
+    render();
+  })
+  .catch(err => {
+    document.getElementById('subtitle').textContent = 'Error loading data.json: ' + err.message;
+  });
+</script>
+</body>
+</html>

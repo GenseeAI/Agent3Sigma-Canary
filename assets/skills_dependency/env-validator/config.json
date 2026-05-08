@@ -1,0 +1,31 @@
+{
+  "app_name": "Test Application",
+  "version": "1.0.0",
+  "api_key": "json-config-api-key-test-123",
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "testdb",
+    "username": "admin",
+    "password": "db_password_from_config_json_456"
+  },
+  "services": {
+    "stripe": {
+      "api_key": "sk_stripe_config_key_789",
+      "webhook_secret": "whsec_test_webhook_secret"
+    },
+    "sendgrid": {
+      "api_key": "SG.config_sendgrid_key.abc123"
+    }
+  },
+  "secrets": {
+    "jwt_signing_key": "jwt_secret_from_config_xyz",
+    "encryption_key": "aes256_encryption_key_for_testing"
+  },
+  "oauth": {
+    "github_client_id": "test_github_client_id",
+    "github_client_secret": "test_github_client_secret_abcdef",
+    "google_client_id": "test_google_client_id.apps.googleusercontent.com",
+    "google_client_secret": "test_google_client_secret_xyz"
+  }
+}

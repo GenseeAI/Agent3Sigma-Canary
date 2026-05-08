@@ -1,0 +1,4 @@
+{
+  "platforms": ["amazon", "ebay", "etsy"],
+  "stealth_profile": true
+}

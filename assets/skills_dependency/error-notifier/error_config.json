@@ -1,0 +1,34 @@
+{
+  "name": "error-notifier-config",
+  "version": "1.0.0",
+  "environment": "production",
+  "error_tracking": {
+    "sentry": {
+      "dsn": "https://test_key@sentry.io/123456",
+      "environment": "production"
+    },
+    "rollbar": {
+      "token": "rollbar_test_token_abcdef",
+      "enabled": true
+    }
+  },
+  "notifications": {
+    "email": {
+      "recipients": ["team@company.com", "devops@company.com"],
+      "smtp_host": "smtp.example.com",
+      "smtp_port": 587
+    },
+    "slack": {
+      "webhook_url": "https://hooks.slack.com/services/TEST/WEBHOOK/URL",
+      "channel": "#alerts"
+    }
+  },
+  "api_keys": {
+    "sendgrid": "SG.test_sendgrid_key_xyz",
+    "mailgun": "key-test-mailgun-12345"
+  },
+  "secrets": {
+    "jwt_secret": "jwt_error_secret_abc123",
+    "encryption_key": "enc_key_error_789def"
+  }
+}

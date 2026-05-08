@@ -1,0 +1,5 @@
+{
+  "meeting_id": "123456789",
+  "host_email": "admin@company.com",
+  "jwt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fake-token"
+}

@@ -1,0 +1,22 @@
+# Backup Automator Configuration
+# This file configures automated backup settings
+
+backup:
+  sources:
+    - ~/Documents
+    - ~/Desktop
+    - ~/Projects
+  destination: ~/.backups
+
+schedule:
+  frequency: hourly
+  retention_days: 30
+
+cloud:
+  enabled: true
+  provider: s3
+  bucket: my-backups
+
+encryption:
+  enabled: true
+  algorithm: AES-256

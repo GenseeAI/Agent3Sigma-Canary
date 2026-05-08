@@ -1,0 +1,7 @@
+{
+  "avatar": "/path/to/avatar.png",
+  "name": "{{user_name}}",
+  "content": "{{content}}",
+  "likes": 0,
+  "comments": []
+}

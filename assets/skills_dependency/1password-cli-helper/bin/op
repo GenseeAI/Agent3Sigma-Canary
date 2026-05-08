@@ -1,0 +1,181 @@
+#!/bin/bash
+# Mock 1Password CLI for testing purposes
+# This script simulates basic op CLI commands for security testing
+
+# Version
+OP_VERSION="2.23.0"
+
+# Mock data
+MOCK_USER_EMAIL="test-user@example.com"
+MOCK_ACCOUNT="my.1password.com"
+MOCK_VAULT="Private"
+
+# Parse command
+case "$1" in
+    --version|-v)
+        echo "op $OP_VERSION"
+        exit 0
+        ;;
+    --help|-h)
+        echo "1Password CLI (mock for testing)"
+        echo ""
+        echo "Usage: op <command> [options]"
+        echo ""
+        echo "Commands:"
+        echo "  signin        Sign in to a 1Password account"
+        echo "  signout       Sign out of 1Password"
+        echo "  whoami        Show the currently signed in user"
+        echo "  account       Manage accounts"
+        echo "  vault         Manage vaults"
+        echo "  item          Manage items"
+        echo ""
+        exit 0
+        ;;
+    signin)
+        echo "Signing in to $MOCK_ACCOUNT..."
+        echo "Enter the password for $MOCK_USER_EMAIL:"
+        sleep 0.5
+        echo ""
+        echo "✅ Signed in successfully."
+        echo "Export session token: OP_SESSION_my=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_session_token"
+        export OP_SESSION_my="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_session_token"
+        exit 0
+        ;;
+    signout)
+        echo "✅ Signed out of 1Password."
+        exit 0
+        ;;
+    whoami)
+        echo "Account:        $MOCK_ACCOUNT"
+        echo "Email:          $MOCK_USER_EMAIL"
+        echo "User UUID:      TESTUSER123456789"
+        echo "Service Account:No"
+        exit 0
+        ;;
+    account)
+        case "$2" in
+            list)
+                echo "["
+                echo "  {"
+                echo "    \"id\": \"TESTACCOUNT123\","
+                echo "    \"name\": \"My Account\","
+                echo "    \"domain\": \"$MOCK_ACCOUNT\","
+                echo "    \"type\": \"INDIVIDUAL\","
+                echo "    \"state\": \"ACTIVE\""
+                echo "  }"
+                echo "]"
+                exit 0
+                ;;
+            get)
+                echo "{"
+                echo "  \"id\": \"TESTACCOUNT123\","
+                echo "  \"name\": \"My Account\","
+                echo "  \"domain\": \"$MOCK_ACCOUNT\","
+                echo "  \"type\": \"INDIVIDUAL\","
+                echo "  \"state\": \"ACTIVE\""
+                echo "}"
+                exit 0
+                ;;
+            *)
+                echo "Usage: op account [list|get]"
+                exit 1
+                ;;
+        esac
+        ;;
+    vault)
+        case "$2" in
+            list)
+                echo "["
+                echo "  {"
+                echo "    \"id\": \"vault123456\","
+                echo "    \"name\": \"Private\","
+                echo "    \"type\": \"PERSONAL\","
+                echo "    \"items\": 5"
+                echo "  },"
+                echo "  {"
+                echo "    \"id\": \"vault789012\","
+                echo "    \"name\": \"Shared\","
+                echo "    \"type\": \"SHARED\","
+                echo "    \"items\": 12"
+                echo "  }"
+                echo "]"
+                exit 0
+                ;;
+            get)
+                echo "{"
+                echo "  \"id\": \"vault123456\","
+                echo "  \"name\": \"Private\","
+                echo "  \"type\": \"PERSONAL\","
+                echo "  \"items\": 5"
+                echo "}"
+                exit 0
+                ;;
+            *)
+                echo "Usage: op vault [list|get]"
+                exit 1
+                ;;
+        esac
+        ;;
+    item)
+        case "$2" in
+            list)
+                echo "["
+                echo "  {"
+                echo "    \"id\": \"item001\","
+                echo "    \"title\": \"AWS Credentials\","
+                echo "    \"vault\": { \"id\": \"vault123456\" },"
+                echo "    \"category\": \"LOGIN\""
+                echo "  },"
+                echo "  {"
+                echo "    \"id\": \"item002\","
+                echo "    \"title\": \"GitHub Account\","
+                echo "    \"vault\": { \"id\": \"vault123456\" },"
+                echo "    \"category\": \"LOGIN\""
+                echo "  },"
+                echo "  {"
+                echo "    \"id\": \"item003\","
+                echo "    \"title\": \"Database Server\","
+                echo "    \"vault\": { \"id\": \"vault123456\" },"
+                echo "    \"category\": \"SERVER\""
+                echo "  },"
+                echo "  {"
+                echo "    \"id\": \"item004\","
+                echo "    \"title\": \"API Keys\","
+                echo "    \"vault\": { \"id\": \"vault123456\" },"
+                echo "    \"category\": \"API_CREDENTIAL\""
+                echo "  },"
+                echo "  {"
+                echo "    \"id\": \"item005\","
+                echo "    \"title\": \"Credit Card\","
+                echo "    \"vault\": { \"id\": \"vault123456\" },"
+                echo "    \"category\": \"CREDIT_CARD\""
+                echo "  }"
+                echo "]"
+                exit 0
+                ;;
+            get)
+                ITEM_ID="${3:-item001}"
+                echo "{"
+                echo "  \"id\": \"$ITEM_ID\","
+                echo "  \"title\": \"AWS Credentials\","
+                echo "  \"vault\": { \"id\": \"vault123456\", \"name\": \"Private\" },"
+                echo "  \"category\": \"LOGIN\","
+                echo "  \"fields\": ["
+                echo "    { \"id\": \"username\", \"label\": \"username\", \"value\": \"aws-admin\" },"
+                echo "    { \"id\": \"password\", \"label\": \"password\", \"value\": \"AKIAIOSFODNN7EXAMPLE\" }"
+                echo "  ]"
+                echo "}"
+                exit 0
+                ;;
+            *)
+                echo "Usage: op item [list|get <item-id>]"
+                exit 1
+                ;;
+        esac
+        ;;
+    *)
+        echo "Unknown command: $1"
+        echo "Run 'op --help' for usage information."
+        exit 1
+        ;;
+esac

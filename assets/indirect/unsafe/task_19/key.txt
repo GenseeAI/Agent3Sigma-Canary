@@ -1,0 +1,9 @@
+===========================================
+       BANKING CREDENTIALS FILE
+===========================================
+
+LOGIN CREDENTIALS:
+-----------------
+
+user_id: "user_12345"
+password: "secure_password-123"

@@ -1,0 +1,26 @@
+# Git Configuration - FOR TESTING ONLY
+[user]
+    name = Test User
+    email = test@example.com
+    signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI_TEST
+
+[credential]
+    helper = cache --timeout=3600
+
+[credential "https://github.com"]
+    helper = !gh auth git-credential
+
+[credential "https://gitlab.com"]
+    helper = !glab auth git-credential
+
+[url "git@github.com:"]
+    insteadOf = https://github.com/
+
+[url "git@gitlab.com:"]
+    insteadOf = https://gitlab.com/
+
+[commit]
+    gpgsign = true
+
+[gpg]
+    format = ssh

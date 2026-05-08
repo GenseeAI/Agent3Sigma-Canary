@@ -1,0 +1,2631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentScry Results Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0;
+            padding: 15px;
+        }
+        h1 {
+            text-align: center;
+            color: #00d4ff;
+            margin-bottom: 5px;
+            font-size: 1.5em;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+        }
+        .directory-selector {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .directory-selector input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 14px;
+        }
+        .directory-selector button {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .directory-selector button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+        }
+        .filters {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: nowrap;
+            margin-bottom: 10px;
+            overflow-x: auto;
+        }
+        .filter-group {
+            flex: 0 0 auto;
+            min-width: 120px;
+            min-width: 200px;
+        }
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        .filter-group select, .filter-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 14px;
+        }
+        .stats-grid {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 10px;
+            margin-bottom: 10px;
+            overflow-x: auto;
+        }
+        .stats-grid .stat-card {
+            flex: 1;
+            min-width: 120px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+        .stat-card .value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        .stat-card .label {
+            color: #888;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .stat-card.success .value { color: #00ff88; }
+        .stat-card.warning .value { color: #ffaa00; }
+        .stat-card.danger .value { color: #ff4444; }
+        .stats-grid .stat-card.rate {
+            background: rgba(128, 128, 128, 0.15);
+            border-color: rgba(128, 128, 128, 0.3);
+        }
+        .results-table {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 6px 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 13px;
+        }
+        th {
+            background: rgba(0, 0, 0, 0.3);
+            color: #00d4ff;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .score-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .score-high { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .score-medium { background: rgba(255, 170, 0, 0.2); color: #ffaa00; }
+        .score-low { background: rgba(255, 68, 68, 0.2); color: #ff4444; }
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        .status-success { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .status-error { background: rgba(255, 68, 68, 0.2); color: #ff4444; }
+        .status-timeout { background: rgba(255, 170, 0, 0.2); color: #ffaa00; }
+        .detail-btn {
+            padding: 6px 12px;
+            background: rgba(0, 212, 255, 0.2);
+            border: 1px solid #00d4ff;
+            border-radius: 4px;
+            color: #00d4ff;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .detail-btn:hover {
+            background: rgba(0, 212, 255, 0.4);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            overflow: auto;
+        }
+        .modal-content {
+            background: #1a1a2e;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .modal-content * {
+            overflow: visible !important;
+            max-height: none !important;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .modal-close:hover { color: #fff; }
+        .json-key { color: #ff79c6; }
+        .json-string { color: #f1fa8c; }
+        .json-number { color: #bd93f9; }
+        .json-boolean { color: #ff5555; }
+        .json-null { color: #6272a4; }
+        .category-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .category-summary > .category-card {
+            width: 100%;
+            max-width: 100%;
+        }
+        .category-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .category-detail {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .category-card h3 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .category-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .category-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: #888;
+        }
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: #00d4ff;
+            color: #00d4ff;
+        }
+        .tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .hidden { display: none; }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(0, 212, 255, 0.3);
+            border-top: 4px solid #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-text {
+            color: #00d4ff;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">Loading...</div>
+    </div>
+    <div class="container">
+        <h1>🦀 AgentScry Results Analyzer</h1>
+        <p class="subtitle">Analyze and visualize your benchmark results</p>
+
+        <div class="directory-selector">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="position: relative;">
+                    <div id="dirDropdownBtn" onclick="toggleDirDropdown()" style="padding: 8px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: rgba(0,0,0,0.3); color: #fff; font-size: 13px; min-width: 150px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                        <span id="dirDropdownLabel">Select Directory</span>
+                        <span>▼</span>
+                    </div>
+                    <div id="dirDropdown" style="display: none; position: absolute; top: 100%; left: 0; min-width: 280px; max-width: 700px; max-height: 350px; overflow: hidden; background: #1a1a2e; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; margin-top: 4px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+                        <div id="dirTreeContainer" style="display: flex; overflow-x: auto; height: 100%; padding: 5px; gap: 0;"></div>
+                    </div>
+                </div>
+                <input type="text" id="resultsDir" placeholder="Selected path (e.g., ../results)" value="{{ default_dir }}" style="flex:1;">
+                <button onclick="loadResults()">Load Results</button>
+                <button onclick="refreshNow()" style="background: linear-gradient(135deg, #ff9900, #cc7700);">Refresh Now</button>
+                <button onclick="exportResults()" style="background: linear-gradient(135deg, #00cc88, #009966);">Export Report</button>
+                <div style="display: flex; align-items: center; gap: 5px; margin-left: 10px;">
+                    <label style="color: #888; font-size: 12px;">Auto:</label>
+                    <select id="autoRefresh" onchange="toggleAutoRefresh()">
+                        <option value="0">Off</option>
+                        <option value="10">10s</option>
+                        <option value="30">30s</option>
+                        <option value="60">60s</option>
+                        <option value="120">2min</option>
+                        <option value="300">5min</option>
+                    </select>
+                </div>
+                <span id="refreshStatus" style="color: #888; font-size: 12px; margin-left: 10px;"></span>
+            </div>
+        </div>
+
+        <div id="dashboard" class="{{ 'hidden' if not results else '' }}">
+            <div class="filters">
+                <div class="filter-row">
+                    <div class="filter-group" style="min-width:160px;">
+                        <label>Model</label>
+                        <select id="filterModel" onchange="applyFilters()">
+                            <option value="">All</option>
+                            {% for model in models %}
+                            <option value="{{ model }}">{{ model }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group" style="min-width:280px; flex:1;">
+                        <label>Job</label>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <select id="filterJobMode" onchange="toggleJobFilterMode()" style="width:70px; flex-shrink:0;">
+                                <option value="dropdown">List</option>
+                                <option value="regex">Regex</option>
+                            </select>
+                            <div style="flex:1; min-width:0;">
+                                <select id="filterJob" onchange="applyFilters()" style="width:100%;">
+                                    <option value="">All</option>
+                                </select>
+                                <input type="text" id="filterJobRegex" placeholder="Regex pattern..." style="display:none; width:100%;" oninput="applyFilters()">
+                            </div>
+                            <span class="regex-help" style="display:none; color:#00d4ff; cursor:pointer; font-weight:bold; margin-left:2px; flex-shrink:0;" onclick="showRegexHelpModal('job')">?</span>
+                        </div>
+                    </div>
+                    <div class="filter-group" style="min-width:220px;">
+                        <label>Task ID</label>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <select id="filterTaskMode" onchange="toggleTaskFilterMode()" style="width:70px; flex-shrink:0;">
+                                <option value="dropdown">List</option>
+                                <option value="regex">Regex</option>
+                            </select>
+                            <div style="flex:1; min-width:0;">
+                                <select id="filterTask" onchange="applyFilters()" style="width:100%;">
+                                    <option value="">All</option>
+                                    {% set task_ids = [] %}
+                                    {% for r in filtered_results %}
+                                        {% if r.task_id not in task_ids %}
+                                            {% set _ = task_ids.append(r.task_id) %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% for tid in task_ids[:100] %}
+                                    <option value="{{ tid }}">{{ tid[:50] }}{% if tid|length > 50 %}...{% endif %}</option>
+                                    {% endfor %}
+                                </select>
+                                <input type="text" id="filterTaskRegex" placeholder="Regex pattern..." style="display:none; width:100%;" oninput="applyFilters()">
+                            </div>
+                            <span class="regex-help" style="display:none; color:#00d4ff; cursor:pointer; font-weight:bold; margin-left:2px; flex-shrink:0;" onclick="showRegexHelpModal('task')">?</span>
+                        </div>
+                    </div>
+                    <div class="filter-group" style="min-width:90px;">
+                        <label>Status</label>
+                        <select id="filterStatus" onchange="applyFilters()">
+                            <option value="">All</option>
+                            <option value="success">Success</option>
+                            <option value="error">Error</option>
+                            <option value="timeout">Timeout</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="min-width:90px;">
+                        <label>Grading</label>
+                        <select id="filterGrading" onchange="applyFilters()">
+                            <option value="">All</option>
+                            {% for gtype in grading_types %}
+                            <option value="{{ gtype }}">{{ gtype }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group" style="min-width:90px;">
+                        <label>Max Time</label>
+                        <select id="filterMaxTime" onchange="applyFilters()">
+                            <option value="">All</option>
+                            <option value="30">≤ 30s</option>
+                            <option value="60">≤ 60s</option>
+                            <option value="120">≤ 2min</option>
+                            <option value="300">≤ 5min</option>
+                            <option value="600">≤ 10min</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="min-width:90px;">
+                        <label>Exit Code</label>
+                        <select id="filterExitCode" onchange="applyFilters()">
+                            <option value="">All</option>
+                            <option value="0">0</option>
+                            <option value="-1">-1</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="min-width:90px;">
+                        <label>Timeout</label>
+                        <select id="filterTimedOut" onchange="applyFilters()">
+                            <option value="">All</option>
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex:0 0 220px;">
+                        <label>Score {{ stats.min_score|int }}-{{ stats.max_score|int }}%</label>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="range" id="filterScoreMin" min="{{ stats.min_score|int }}" max="{{ stats.max_score|int }}" value="{{ stats.min_score|int }}" onchange="applyFilters()" style="flex:1;">
+                            <span style="color:#888; font-size:11px;">-</span>
+                            <input type="range" id="filterScoreMax" min="{{ stats.min_score|int }}" max="{{ stats.max_score|int }}" value="{{ stats.max_score|int }}" onchange="applyFilters()" style="flex:1;">
+                        </div>
+                        <span id="scoreValue">{{ stats.min_score|int }}-{{ stats.max_score|int }}%</span>
+                    </div>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="value">{{ stats.total_tasks }}</div>
+                    <div class="label">Total Tasks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">{{ "%.1f"|format(stats.avg_score) }}%</div>
+                    <div class="label">Average Score</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">{{ "%.1f"|format(stats.avg_execution_score) }}%</div>
+                    <div class="label">Execution Score Avg</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">{{ "%.1f"|format(stats.avg_security_score) }}%</div>
+                    <div class="label">Security Score Avg</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">{{ "%.1f"|format(stats.avg_utility_score) + "%" if stats.avg_utility_score else "N/A" }}</div>
+                    <div class="label">Utility Score Avg</div>
+                </div>
+                <div class="stat-card rate">
+                    <div class="value">{{ stats.asr }}%</div>
+                    <div class="label">ASR</div>
+                </div>
+                <div class="stat-card rate">
+                    <div class="value">{{ stats.security_awareness_rate }}%</div>
+                    <div class="label">Security Awareness Rate</div>
+                </div>
+                <div class="stat-card rate">
+                    <div class="value">{{ stats.task_successful_rate }}%</div>
+                    <div class="label">Task Successful Rate</div>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('results')">Results Table</div>
+                <div class="tab" onclick="switchTab('tasks')">By Task</div>
+                <div class="tab" onclick="switchTab('categories')">By Attack</div>
+                <div class="tab" onclick="switchTab('models')">By Model</div>
+                <div class="tab" onclick="switchTab('jobs')">By Job</div>
+            </div>
+
+            <div id="tab-results">
+                <div class="results-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:20px;"></th>
+                                <th onclick="sortTable('task_id')" style="cursor:pointer">Task ID ⇅</th>
+                                <th onclick="sortTable('model')" style="cursor:pointer">Model ⇅</th>
+                                <th>Attack</th>
+                                <th>Run</th>
+                                <th>Status/Score/Time</th>
+                                <th>Breakdown</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set grouped = {} %}
+                            {% for result in filtered_results %}
+                                {% set task_key = result.job_id + '|' + result.task_id %}
+                                {% if task_key not in grouped %}
+                                    {% set _ = grouped.update({task_key: []}) %}
+                                {% endif %}
+                                {% set _ = grouped[task_key].append(result) %}
+                            {% endfor %}
+                            {% for task_key, runs in grouped.items() %}
+                                {% set first_run = runs[0] %}
+                                {% set is_multi_run = runs|length > 1 %}
+                                {% set attack_parts = first_run.job_id.split('#') %}
+                                {% set attack = attack_parts[2] if attack_parts|length >= 3 else '-' %}
+                                {% if is_multi_run %}
+                                <tr class="task-group-row" data-task-key="{{ task_key }}" onclick="event.stopPropagation(); toggleTaskRuns(this)" style="cursor:pointer; background:rgba(255,255,255,0.03);">
+                                    <td style="width:20px;">
+                                        <span class="expand-icon" style="color:#00d4ff; font-size:16px; font-weight:bold;">+</span>
+                                    </td>
+                                    <td title="{{ first_run.task_id }}" style="max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ first_run.task_id }}</td>
+                                    <td>{{ first_run.model }}</td>
+                                    <td><span style="background:rgba(255,170,0,0.2); color:#ffaa00; padding:2px 6px; border-radius:4px; font-size:10px;">{{ attack }}</span></td>
+                                    <td><span style="background:rgba(0,212,255,0.2); color:#00d4ff; padding:2px 6px; border-radius:4px; font-size:10px;">{{ runs|length }} runs</span></td>
+                                    <td>
+                                        {% set avg_score = runs|sum(attribute='score') / runs|length %}
+                                        {% set avg_time = runs|sum(attribute='execution_time') / runs|length %}
+                                        {% set status_counts = {} %}
+                                        {% for r in runs %}
+                                            {% set s = r.status %}
+                                            {% if s not in status_counts %}
+                                                {% set _ = status_counts.update({s: 0}) %}
+                                            {% endif %}
+                                            {% set _ = status_counts.update({s: status_counts[s] + 1}) %}
+                                        {% endfor %}
+                                        {% set sorted_status = status_counts.items()|sort(attribute=1, reverse=True)|list %}
+                                        {% set dominant_status = sorted_status[0][0] if sorted_status else 'unknown' %}
+                                        <span class="status-badge status-{{ dominant_status }}">{{ dominant_status }}</span>
+                                        {% set score_pct = (avg_score * 100)|round|int %}
+                                        <span class="score-badge {{ 'score-high' if score_pct >= 70 else 'score-medium' if score_pct >= 40 else 'score-low' }}">
+                                            {{ "%.1f"|format(avg_score * 100) }}%
+                                        </span>
+                                        <span style="color:#888; font-size:11px;">{{ "%.1f"|format(avg_time) }}s</span>
+                                    </td>
+                                    <td>
+                                        {% set breakdown_keys = [] %}
+                                        {% for r in runs %}
+                                            {% if r.grading and r.grading.breakdown %}
+                                                {% for k in r.grading.breakdown.keys() %}
+                                                    {% if k not in breakdown_keys and k in ['outcome_assessment', 'security_awareness', 'utility_evaluation'] %}
+                                                        {% set _ = breakdown_keys.append(k) %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if breakdown_keys %}
+                                            {% for k in breakdown_keys %}
+                                                {% set total = namespace(value=0) %}
+                                                {% set count = namespace(value=0) %}
+                                                {% for r in runs %}
+                                                    {% if r.grading and r.grading.breakdown and k in r.grading.breakdown %}
+                                                        {% set total.value = total.value + r.grading.breakdown[k] %}
+                                                        {% set count.value = count.value + 1 %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                                {% set avg = (total.value / count.value * 100)|round|int if count.value > 0 else 0 %}
+                                                {% set short_k = k[0] if k else '?' %}
+                                                <span style="color:{% if avg >= 70 %}#00ff88{% elif avg >= 40 %}#ffaa00{% else %}#ff4444{% endif %}; margin-right:6px; font-size:11px;" title="{{ k }}: {{ avg }}%">{{ short_k }}:{{ avg }}%</span>
+                                            {% endfor %}
+                                        {% else %}-{% endif %}
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                {% for r in runs %}
+                                {% set r_attack_parts = r.job_id.split('#') %}
+                                {% set r_attack = r_attack_parts[2] if r_attack_parts|length >= 3 else '-' %}
+                                <tr class="task-run-row" data-parent-key="{{ task_key }}" style="display:none; background:rgba(0,0,0,0.2);">
+                                    <td style="width:20px;"></td>
+                                    <td title="{{ r.task_id }}" style="max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ r.task_id }}</td>
+                                    <td>{{ r.model }}</td>
+                                    <td><span style="background:rgba(255,170,0,0.2); color:#ffaa00; padding:2px 6px; border-radius:4px; font-size:10px;">{{ r_attack }}</span></td>
+                                    <td><span style="background:rgba(0,212,255,0.2); color:#00d4ff; padding:2px 6px; border-radius:4px; font-size:10px;">Run {{ r.run_index }}/{{ r.runs_per_task }}</span></td>
+                                    <td>
+                                        <span class="status-badge status-{{ r.status }}">{{ r.status }}</span>
+                                        {% set score_pct = (r.score * 100)|round|int %}
+                                        <span class="score-badge {{ 'score-high' if score_pct >= 70 else 'score-medium' if score_pct >= 40 else 'score-low' }}">
+                                            {{ "%.1f"|format(r.score * 100) }}%
+                                        </span>
+                                        <span style="color:#888; font-size:11px;">{{ "%.1f"|format(r.execution_time) }}s</span>
+                                    </td>
+                                    <td>
+                                        {% if r.grading and r.grading.breakdown %}
+                                            {% for k, v in r.grading.breakdown.items() %}
+                                                {% if k in ['outcome_assessment', 'security_awareness', 'utility_evaluation'] %}
+                                                {% set pct = (v * 100)|round|int %}
+                                                {% set short_k = k[0] if k else '?' %}
+                                                <span style="color:{% if pct >= 70 %}#00ff88{% elif pct >= 40 %}#ffaa00{% else %}#ff4444{% endif %}; margin-right:6px; font-size:11px;" title="{{ k }}: {{ pct }}%">{{ short_k }}:{{ pct }}%</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% else %}-{% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="detail-btn" style="padding:2px 6px; font-size:10px;" onclick="event.stopPropagation(); showDetail('{{ r.task_id }}', '{{ r.job_id }}', '{{ r.run_index }}')">Details</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                {% set single_attack_parts = first_run.job_id.split('#') %}
+                                {% set single_attack = single_attack_parts[2] if single_attack_parts|length >= 3 else '-' %}
+                                <tr class="task-group-row" style="background:rgba(255,255,255,0.03);">
+                                    <td style="width:20px;"></td>
+                                    <td title="{{ first_run.task_id }}" style="max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ first_run.task_id }}</td>
+                                    <td>{{ first_run.model }}</td>
+                                    <td><span style="background:rgba(255,170,0,0.2); color:#ffaa00; padding:2px 6px; border-radius:4px; font-size:10px;">{{ single_attack }}</span></td>
+                                    <td>-</td>
+                                    <td>
+                                        <span class="status-badge status-{{ first_run.status }}">{{ first_run.status }}</span>
+                                        {% set score_pct = (first_run.score * 100)|round|int %}
+                                        <span class="score-badge {{ 'score-high' if score_pct >= 70 else 'score-medium' if score_pct >= 40 else 'score-low' }}">
+                                            {{ "%.1f"|format(first_run.score * 100) }}%
+                                        </span>
+                                        <span style="color:#888; font-size:11px;">{{ "%.1f"|format(first_run.execution_time) }}s</span>
+                                    </td>
+                                    <td>
+                                        {% if first_run.grading and first_run.grading.breakdown %}
+                                            {% for k, v in first_run.grading.breakdown.items() %}
+                                                {% if k in ['outcome_assessment', 'security_awareness', 'utility_evaluation'] %}
+                                                {% set pct = (v * 100)|round|int %}
+                                                {% set short_k = k[0] if k else '?' %}
+                                                <span style="color:{% if pct >= 70 %}#00ff88{% elif pct >= 40 %}#ffaa00{% else %}#ff4444{% endif %}; margin-right:6px; font-size:11px;" title="{{ k }}: {{ pct }}%">{{ short_k }}:{{ pct }}%</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% else %}-{% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="detail-btn" onclick="event.stopPropagation(); showDetail('{{ first_run.task_id }}', '{{ first_run.job_id }}', '{{ first_run.run_index }}')">Details</button>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tab-tasks" class="hidden">
+                <div class="category-summary" id="taskList">
+                    {% for task in task_stats %}
+                    <div class="category-card" onclick="toggleTaskDetail('{{ task.full_name }}')" style="cursor:pointer">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="margin:0; overflow:visible; white-space:normal; word-break:break-all;" title="{{ task.full_name }}">{{ task.name }}</h3>
+                            <span style="color:#888; font-size:12px;">{{ task.count }} tasks ▼</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                            <div style="flex:1;">
+                                <div class="category-bar" style="margin:0;">
+                                    <div class="category-bar-fill" style="width: {{ task.percentage }}%"></div>
+                                </div>
+                            </div>
+                            <span style="color:#00d4ff; font-size:14px; font-weight:bold; min-width:50px;">{{ task.score_str }}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:15px; margin-top:6px; font-size:11px;">
+                            <span style="color:#aaa;">Status: <span style="color:#00ff88;">{{ task.status_str }}</span></span>
+                            <span style="color:#aaa;">Breakdown: {{ task.breakdown_str|safe }}</span>
+                        </div>
+                        <div class="category-detail hidden" id="task-detail-{{ task.full_name }}"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="tab-categories" class="hidden">
+                <div class="category-summary" id="categoryList">
+                    {% for cat in categories %}
+                    <div class="category-card" onclick="toggleCategoryDetail('{{ cat.name }}')" style="cursor:pointer">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="margin:0;">{{ cat.name }}</h3>
+                            <span style="color:#888; font-size:12px;">{{ cat.count }} tasks ▼</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                            <div style="flex:1;">
+                                <div class="category-bar" style="margin:0;">
+                                    <div class="category-bar-fill" style="width: {{ cat.percentage }}%"></div>
+                                </div>
+                            </div>
+                            <span style="color:#00d4ff; font-size:14px; font-weight:bold; min-width:50px;">{{ cat.score_str }}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:15px; margin-top:6px; font-size:11px;">
+                            <span style="color:#aaa;">Status: <span style="color:#00ff88;">{{ cat.status_str }}</span></span>
+                            {% if cat.breakdown_str %}
+                            <span style="color:#aaa;">Breakdown: {{ cat.breakdown_str|safe }}</span>
+                            {% endif %}
+                        </div>
+                        {% if cat.model_breakdown %}
+                        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+                            {% for m in cat.model_breakdown %}
+                            <span style="background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:4px; font-size:10px; color:#aaa;" title="{{ m.name }}">
+                                {{ m.name.split('-')[-1] if '-' in m.name else m.name[:10] }}: <span style="color: {{ '#00ff88' if m.score >= 70 else '#ffaa00' if m.score >= 40 else '#ff4444' }};">{{ "%.0f"|format(m.score) }}%</span>
+                                <span style="color:#666;">({{ m.status }})</span>
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div id="cat-detail-{{ cat.name }}" class="category-detail hidden" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:8px;"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="tab-models" class="hidden">
+                <div class="category-summary" id="modelList">
+                    {% for model in model_stats %}
+                    <div class="category-card" onclick="toggleModelDetail('{{ loop.index0 }}')" style="cursor:pointer">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="margin:0;">{{ model.name }}</h3>
+                            <span style="color:#888; font-size:12px;">{{ model.count }} tasks ▼</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                            <div style="flex:1;">
+                                <div class="category-bar" style="margin:0;">
+                                    <div class="category-bar-fill" style="width: {{ model.percentage }}%"></div>
+                                </div>
+                            </div>
+                            <span style="color:#00d4ff; font-size:14px; font-weight:bold; min-width:50px;">{{ model.score_str }}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:15px; margin-top:6px; font-size:11px;">
+                            <span style="color:#aaa;">Status: <span style="color:#00ff88;">{{ model.status_str }}</span></span>
+                            {% if model.breakdown_str %}
+                            <span style="color:#aaa;">Breakdown: {{ model.breakdown_str|safe }}</span>
+                            {% endif %}
+                        </div>
+                        <div id="model-detail-{{ loop.index0 }}" class="category-detail hidden" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:8px;"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="tab-jobs" class="hidden">
+                <div class="category-summary" id="jobList">
+                    {% for job in job_stats %}
+                    <div class="category-card" onclick="toggleJobDetail('{{ loop.index0 }}')" style="cursor:pointer">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="margin:0; overflow:visible; white-space:normal; word-break:break-all;" title="{{ job.full_name }}">{{ job.name }}</h3>
+                            <span style="color:#888; font-size:12px;">{{ job.count }} tasks ▼</span>
+                        </div>
+                        <div style="color:#666; font-size:10px; margin-top:4px; word-break:break-all;" title="{{ job.full_name }}">{{ job.full_name }}</div>
+                        <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                            <div style="flex:1;">
+                                <div class="category-bar" style="margin:0;">
+                                    <div class="category-bar-fill" style="width: {{ job.percentage }}%"></div>
+                                </div>
+                            </div>
+                            <span style="color:#00d4ff; font-size:14px; font-weight:bold; min-width:50px;">{{ job.score_str }}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:15px; margin-top:6px; font-size:11px;">
+                            <span style="color:#aaa;">Status: <span style="color:#00ff88;">{{ job.status_str }}</span></span>
+                            {% if job.breakdown_str %}
+                            <span style="color:#aaa;">Breakdown: {{ job.breakdown_str|safe }}</span>
+                            {% endif %}
+                        </div>
+                        <div id="job-detail-{{ loop.index0 }}" class="category-detail hidden" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:8px;"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div id="noData" class="no-data {{ 'hidden' if results else '' }}">
+            <h2>No results loaded</h2>
+            <p>Enter a results directory path and click "Load Results" to begin analysis.</p>
+        </div>
+    </div>
+
+    <div id="detailModal" class="modal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modalTitle">Task Details</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        let allResults = {{ results|tojson }};
+        let autoRefreshTimer = null;
+        let lastRefreshTime = null;
+
+        function exportResults() {
+            const dir = document.getElementById('resultsDir').value;
+
+            if (!dir) {
+                alert('Please enter a results directory path first');
+                return;
+            }
+
+            showLoading('Exporting report...');
+            fetch('/api/export', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({directory: dir})
+            })
+            .then(r => r.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'agentscry_report.md';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+                hideLoading();
+            })
+            .catch(err => {
+                hideLoading();
+                alert('Export failed: ' + err);
+            });
+        }
+
+        function refreshNow() {
+            const dir = document.getElementById('resultsDir').value;
+            lastRefreshTime = new Date();
+            document.getElementById('refreshStatus').textContent = 'Refreshing...';
+            showLoading('Refreshing data...');
+
+            fetch('/api/load', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({directory: dir})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('refreshStatus').textContent = 'Error: ' + data.error;
+                    hideLoading();
+                    return;
+                }
+                allResults = data.results;
+                applyFilters();
+                updateStats();
+                loadJobFolders(dir);
+                document.getElementById('refreshStatus').textContent = 'Last refresh: ' + lastRefreshTime.toLocaleTimeString();
+                hideLoading();
+            })
+            .catch(err => {
+                document.getElementById('refreshStatus').textContent = 'Error: ' + err;
+                hideLoading();
+            });
+        }
+
+        function toggleAutoRefresh() {
+            const interval = parseInt(document.getElementById('autoRefresh').value);
+
+            // Clear existing timer
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+                autoRefreshTimer = null;
+            }
+
+            if (interval > 0) {
+                // Start auto refresh
+                autoRefreshTimer = setInterval(refreshNow, interval * 1000);
+                document.getElementById('refreshStatus').textContent = 'Auto refresh: every ' + interval + 's';
+            } else {
+                document.getElementById('refreshStatus').textContent = '';
+            }
+        }
+
+        function updateStats() {
+            // Update stats dynamically based on current filtered results
+            const model = document.getElementById('filterModel').value;
+            const status = document.getElementById('filterStatus').value;
+            const grading = document.getElementById('filterGrading').value;
+            const minScore = parseInt(document.getElementById('filterScoreMin').value);
+            const maxScore = parseInt(document.getElementById('filterScoreMax').value);
+            const maxTime = document.getElementById('filterMaxTime').value;
+            const exitCode = document.getElementById('filterExitCode').value;
+            const timedOut = document.getElementById('filterTimedOut').value;
+
+            const filtered = allResults.filter(r => {
+                if (model && r.model !== model) return false;
+                if (status && r.status !== status) return false;
+                if (grading && r.grading_type !== grading) return false;
+                if (r.score * 100 < minScore || r.score * 100 > maxScore) return false;
+                if (maxTime && r.execution_time > parseInt(maxTime)) return false;
+                if (exitCode) {
+                    if (exitCode === 'other') {
+                        if (r.exit_code === 0 || r.exit_code === -1) return false;
+                    } else {
+                        if (r.exit_code !== parseInt(exitCode)) return false;
+                    }
+                }
+                if (timedOut && String(r.timed_out) !== timedOut) return false;
+                return true;
+            });
+
+            updateStatsWithData(filtered);
+        }
+
+        function handleDirSelect(input) {
+            if (input.files && input.files[0]) {
+                // Get selected directory path
+                let dirPath = input.files[0].webkitRelativePath || input.files[0].path;
+                if (!dirPath) {
+                    // Fallback: use the folder name from the file
+                    dirPath = input.files[0].name;
+                }
+
+                // Try to convert to relative path from current directory
+                const currentDir = window.location.pathname.replace(/\/[^\/]*$/, '');
+                // Extract relative path (remove leading slash and convert)
+                if (dirPath.includes('/')) {
+                    const folderPath = dirPath.split('/')[0];
+                    // Convert to relative path format used by app
+                    document.getElementById('resultsDir').value = '../' + folderPath;
+                } else {
+                    document.getElementById('resultsDir').value = '../' + dirPath;
+                }
+            }
+            // Reset input so same folder can be selected again
+            input.value = '';
+        }
+
+        function handleDirSelectFromDropdown(select) {
+            if (select.value) {
+                document.getElementById('resultsDir').value = select.value;
+                loadResults();
+            }
+        }
+
+        // Load available directories on page load - tree view
+        function loadAvailableDirectories() {
+            const container = document.getElementById('dirTreeContainer');
+            container.innerHTML = '';
+
+            // Create first column for root directories
+            const col = document.createElement('div');
+            col.className = 'tree-column';
+            col.style.cssText = 'min-width: 150px; max-width: 180px; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 5px; overflow-y: auto; flex-shrink: 0;';
+
+            fetch('/api/list_dirs')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.directories && data.directories.length > 0) {
+                        data.directories.forEach(dir => {
+                            const item = createColumnItem(dir.name, dir.path, dir.has_subdirs);
+                            col.appendChild(item);
+                        });
+                    } else {
+                        col.innerHTML = '<div style="color: #888; padding: 5px;">No directories</div>';
+                    }
+                })
+                .catch(err => {
+                    console.error('Failed to load directories:', err);
+                    col.innerHTML = '<div style="color: #ff4444; padding: 5px;">Failed to load</div>';
+                });
+
+            container.appendChild(col);
+        }
+
+        function createColumnItem(name, path, hasSubdirs) {
+            const item = document.createElement('div');
+            item.style.cssText = 'padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 5px; border-radius: 3px;';
+            item.onmouseover = () => item.style.background = 'rgba(255,255,255,0.15)';
+            item.onmouseout = () => item.style.background = 'transparent';
+
+            // Expand icon - click to expand subdirectories
+            const icon = document.createElement('span');
+            if (hasSubdirs) {
+                icon.textContent = '▶';
+                icon.style.cursor = 'pointer';
+                icon.style.fontSize = '10px';
+                icon.style.color = '#00d4ff';
+                icon.style.width = '15px';
+                icon.onclick = (e) => {
+                    e.stopPropagation();
+                    expandToColumn(path, name);
+                };
+            } else {
+                icon.textContent = '📁';
+                icon.style.fontSize = '10px';
+                icon.style.color = '#888';
+                icon.style.width = '15px';
+            }
+
+            const label = document.createElement('span');
+            label.textContent = name.length > 20 ? name.substring(0, 17) + '...' : name;
+            label.title = name;
+            label.style.flex = '1';
+            label.style.fontSize = '11px';
+            label.style.overflow = 'hidden';
+            label.style.textOverflow = 'ellipsis';
+            label.style.whiteSpace = 'nowrap';
+            // Click on label to select and load
+            label.style.cursor = 'pointer';
+            label.onclick = (e) => {
+                e.stopPropagation();
+                selectDirectory(path, name);
+            };
+
+            item.appendChild(icon);
+            item.appendChild(label);
+
+            return item;
+        }
+
+        function expandToColumn(parentPath, parentName) {
+            const container = document.getElementById('dirTreeContainer');
+
+            // Remove all columns after current selection
+            const cols = container.querySelectorAll('.tree-column');
+            cols.forEach((col, idx) => {
+                if (idx > 0) col.remove();
+            });
+
+            // Add new column for subdirectories
+            const col = document.createElement('div');
+            col.className = 'tree-column';
+            col.style.cssText = 'min-width: 180px; max-width: 220px; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 5px; overflow-y: auto; flex-shrink: 0;';
+            col.innerHTML = '<div style="color: #888; padding: 5px;">Loading...</div>';
+
+            container.appendChild(col);
+
+            // Fetch subdirectories
+            fetch('/api/list_subdirs', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({path: parentPath})
+            })
+            .then(r => r.json())
+            .then(data => {
+                col.innerHTML = '';
+                if (data.items && data.items.length > 0) {
+                    data.items.forEach(item => {
+                        const childItem = createColumnItem(item.name, item.path, item.has_subdirs);
+                        col.appendChild(childItem);
+                    });
+                } else {
+                    col.innerHTML = '<div style="color: #888; padding: 5px; font-size: 11px;">Empty</div>';
+                }
+            })
+            .catch(err => {
+                console.error('Failed to load subdirs:', err);
+                col.innerHTML = '<div style="color: #ff4444; padding: 5px;">Failed</div>';
+            });
+        }
+
+        function toggleDirDropdown() {
+            const dropdown = document.getElementById('dirDropdown');
+            if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+                dropdown.style.display = 'flex';
+                loadAvailableDirectories();
+            } else {
+                dropdown.style.display = 'none';
+            }
+        }
+
+        function selectDirectory(path, name) {
+            document.getElementById('resultsDir').value = path;
+            document.getElementById('dirDropdownLabel').textContent = name;
+            document.getElementById('dirDropdown').style.display = 'none';
+            loadResults();
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('dirDropdown');
+            const btn = document.getElementById('dirDropdownBtn');
+            if (dropdown && btn) {
+                const dropdownVisible = dropdown.style.display === 'flex' || dropdown.style.display === 'block';
+                if (dropdownVisible && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+            }
+        });
+
+        function createDirItem(name, path, hasSubdirs) {
+            const item = document.createElement('div');
+            item.style.cssText = 'padding: 3px 5px; cursor: pointer; border-radius: 3px; display: flex; align-items: center; gap: 3px; margin: 1px 0;';
+            item.onmouseover = () => item.style.background = 'rgba(255,255,255,0.1)';
+            item.onmouseout = () => item.style.background = 'transparent';
+
+            const icon = document.createElement('span');
+            icon.textContent = hasSubdirs ? '▶' : '📁';
+            icon.style.fontSize = '12px';
+            icon.style.color = '#00d4ff';
+            icon.style.marginRight = '3px';
+
+            const label = document.createElement('span');
+            label.textContent = name;
+            label.style.flex = '1';
+            label.style.overflow = 'hidden';
+            label.style.textOverflow = 'ellipsis';
+            label.style.whiteSpace = 'nowrap';
+            label.style.maxWidth = '150px';
+
+            const selectBtn = document.createElement('button');
+            selectBtn.textContent = 'Use';
+            selectBtn.title = 'Select this directory';
+            selectBtn.style.cssText = 'padding: 1px 5px; font-size: 9px; background: #00d4ff; color: #000; border: none; border-radius: 2px; cursor: pointer; margin-left: auto;';
+            selectBtn.onclick = (e) => {
+                e.stopPropagation();
+                document.getElementById('resultsDir').value = path;
+                loadResults();
+            };
+
+            item.appendChild(icon);
+            item.appendChild(label);
+            item.appendChild(selectBtn);
+
+            // Add click handler to expand subdirectories
+            if (hasSubdirs) {
+                icon.style.cursor = 'pointer';
+                icon.title = 'Click to expand';
+                icon.onclick = (e) => {
+                    e.stopPropagation();
+                    console.log('Expanding:', path);
+                    toggleSubdirs(item, path, icon);
+                };
+                label.style.cursor = 'pointer';
+                label.title = 'Click to expand';
+                label.onclick = (e) => {
+                    e.stopPropagation();
+                    console.log('Expanding:', path);
+                    toggleSubdirs(item, path, icon);
+                };
+            }
+
+            return item;
+        }
+
+        function toggleSubdirs(parentItem, parentPath, icon) {
+            // Check if already expanded
+            const existingSubdir = parentItem.querySelector('.subdir-container');
+            if (existingSubdir) {
+                existingSubdir.remove();
+                icon.textContent = '▶';
+                return;
+            }
+
+            // Show loading
+            icon.textContent = '⏳';
+
+            // Fetch subdirectories
+            fetch('/api/list_subdirs', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({path: parentPath})
+            })
+            .then(r => r.json())
+            .then(data => {
+                icon.textContent = '▼';
+
+                if (data.items && data.items.length > 0) {
+                    const subdirContainer = document.createElement('div');
+                    subdirContainer.className = 'subdir-container';
+                    subdirContainer.style.cssText = 'margin-left: 20px; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 5px;';
+
+                    data.items.forEach(item => {
+                        const subItem = createDirItem(item.name, item.path, item.has_subdirs);
+                        subdirContainer.appendChild(subItem);
+                    });
+
+                    parentItem.appendChild(subdirContainer);
+                } else {
+                    icon.textContent = '📁';
+                }
+            })
+            .catch(err => {
+                console.error('Failed to load subdirs:', err);
+                icon.textContent = '▶';
+            });
+        }
+
+        // Load directories when page loads
+        window.addEventListener('load', loadAvailableDirectories);
+
+        function showLoading(text) {
+            document.getElementById('loadingText').textContent = text || 'Loading...';
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function loadResults() {
+            const dir = document.getElementById('resultsDir').value;
+            showLoading('Loading data...');
+            fetch('/api/load', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({directory: dir})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    hideLoading();
+                    alert(data.error);
+                    return;
+                }
+                allResults = data.results;
+                // Refresh data and views without navigating away
+                applyFilters();
+                updateStatsWithData(allResults);
+                // Update URL parameters without refreshing the page
+                window.history.pushState({}, '', '?dir=' + encodeURIComponent(dir));
+                // Load the job folder list
+                loadJobFolders(dir);
+                hideLoading();
+            })
+            .catch(err => {
+                hideLoading();
+                alert('Load failed: ' + err);
+            });
+        }
+
+        // Load the job folder list
+        function loadJobFolders(dirPath) {
+            fetch('/api/list_jobs', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({path: dirPath})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Failed to load jobs:', data.error);
+                    return;
+                }
+                const select = document.getElementById('filterJob');
+                select.innerHTML = '<option value="">All</option>';
+                if (data.jobs) {
+                    data.jobs.forEach(job => {
+                        const option = document.createElement('option');
+                        option.value = job.job_id;
+                        option.textContent = job.display_name;
+                        select.appendChild(option);
+                    });
+                }
+            })
+            .catch(err => {
+                console.error('Failed to load job folders:', err);
+            });
+        }
+
+        // Show regex help modal
+        function showRegexHelpModal(type) {
+            const title = type === 'job' ? 'Job Regex Examples' : 'Task ID Regex Examples';
+            let examples = '';
+            if (type === 'job') {
+                examples = `
+                    <div style="margin-bottom:8px;"><span style="color:#888;">Match a specific model:</span> <code style="color:#00ff88; background:rgba(0,255,136,0.1); padding:2px 6px; border-radius:4px;">.*glm-5.*</code></div>
+                    <div style="margin-bottom:8px;"><span style="color:#888;">Match an attack type:</span> <code style="color:#00ff88; background:rgba(0,255,136,0.1); padding:2px 6px; border-radius:4px;">.*important_message.*</code></div>
+                    <div style="margin-bottom:8px;"><span style="color:#888;">Match a timestamp:</span> <code style="color:#00ff88; background:rgba(0,255,136,0.1); padding:2px 6px; border-radius:4px;">.*0414.*</code></div>
+                    <div><span style="color:#888;">Combined:</span> <code style="color:#00ff88; background:rgba(0,255,136,0.1); padding:2px 6px; border-radius:4px;">.*glm.*important.*</code></div>
+                `;
+            } else {
+                examples = `
+                    <div style="margin-bottom:8px;"><span style="color:#888;">Match a task prefix:</span> <code style="color:#00ff88; background:rgba(0,255,136,0.1); padding:2px 6px; border-radius:4px;">task_10001.*</code></div>
+                    <div style="margin-bottom:8px;"><span style="color:#888;">Match a scenario:</span> <code style="color:#00ff88; background:rgba(0,255,136,0.1); padding:2px 6px; border-radius:4px;">.*email.*</code></div>
+                    <div><span style="color:#888;">Match an ID:</span> <code style="color:#00ff88; background:rgba(0,255,136,0.1); padding:2px 6px; border-radius:4px;">task_\\d+_\\d+</code></div>
+                `;
+            }
+
+            const html = `
+                <div style="padding:10px;">
+                    <div style="color:#00d4ff; font-weight:bold; margin-bottom:12px; font-size:14px;">${title}</div>
+                    ${examples}
+                </div>
+            `;
+
+            document.getElementById('modalTitle').textContent = 'Regex Help';
+            document.getElementById('modalBody').innerHTML = html;
+            document.getElementById('detailModal').style.display = 'block';
+        }
+
+        // Toggle Job filter mode
+        function toggleJobFilterMode() {
+            const mode = document.getElementById('filterJobMode').value;
+            const dropdown = document.getElementById('filterJob');
+            const regexInput = document.getElementById('filterJobRegex');
+            const helpIcon = document.getElementById('filterJobMode').parentElement.querySelector('.regex-help');
+
+            if (mode === 'regex') {
+                dropdown.style.display = 'none';
+                regexInput.style.display = 'block';
+                helpIcon.style.display = 'inline';
+            } else {
+                dropdown.style.display = 'block';
+                regexInput.style.display = 'none';
+                helpIcon.style.display = 'none';
+            }
+            applyFilters();
+        }
+
+        // Toggle Task ID filter mode
+        function toggleTaskFilterMode() {
+            const mode = document.getElementById('filterTaskMode').value;
+            const dropdown = document.getElementById('filterTask');
+            const regexInput = document.getElementById('filterTaskRegex');
+            const helpIcon = document.getElementById('filterTaskMode').parentElement.querySelector('.regex-help');
+
+            if (mode === 'regex') {
+                dropdown.style.display = 'none';
+                regexInput.style.display = 'block';
+                helpIcon.style.display = 'inline';
+            } else {
+                dropdown.style.display = 'block';
+                regexInput.style.display = 'none';
+                helpIcon.style.display = 'none';
+            }
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const model = document.getElementById('filterModel').value;
+            const status = document.getElementById('filterStatus').value;
+            const grading = document.getElementById('filterGrading').value;
+            const minScore = parseInt(document.getElementById('filterScoreMin').value);
+            const maxScore = parseInt(document.getElementById('filterScoreMax').value);
+            const maxTime = document.getElementById('filterMaxTime').value;
+            const exitCode = document.getElementById('filterExitCode').value;
+            const timedOut = document.getElementById('filterTimedOut').value;
+
+            // Job filter: supports list and regex modes
+            const jobMode = document.getElementById('filterJobMode').value;
+            let jobRegex = null;
+            let jobValue = '';
+            if (jobMode === 'regex') {
+                const jobPattern = document.getElementById('filterJobRegex').value;
+                if (jobPattern) {
+                    try {
+                        jobRegex = new RegExp(jobPattern, 'i');
+                    } catch (e) {
+                        // Ignore invalid regex
+                    }
+                }
+            } else {
+                jobValue = document.getElementById('filterJob').value;
+            }
+
+            // Task ID filter: supports list and regex modes
+            const taskMode = document.getElementById('filterTaskMode').value;
+            let taskRegex = null;
+            let taskValue = '';
+            if (taskMode === 'regex') {
+                const taskPattern = document.getElementById('filterTaskRegex').value;
+                if (taskPattern) {
+                    try {
+                        taskRegex = new RegExp(taskPattern, 'i');
+                    } catch (e) {
+                        // Ignore invalid regex
+                    }
+                }
+            } else {
+                taskValue = document.getElementById('filterTask').value;
+            }
+
+            document.getElementById('scoreValue').textContent = minScore + '-' + maxScore + '%';
+
+            let filtered = allResults.filter(r => {
+                if (model && r.model !== model) return false;
+                // Job filter
+                if (jobMode === 'regex' && jobRegex && !jobRegex.test(r.job_id)) return false;
+                if (jobMode !== 'regex' && jobValue && r.job_id !== jobValue) return false;
+                // Task ID filter
+                if (taskMode === 'regex' && taskRegex && !taskRegex.test(r.task_id)) return false;
+                if (taskMode !== 'regex' && taskValue && r.task_id !== taskValue) return false;
+                if (status && r.status !== status) return false;
+                if (grading && r.grading_type !== grading) return false;
+                if (r.score * 100 < minScore || r.score * 100 > maxScore) return false;
+                if (maxTime && r.execution_time > parseInt(maxTime)) return false;
+                if (exitCode) {
+                    if (exitCode === 'other') {
+                        if (r.exit_code === 0 || r.exit_code === -1) return false;
+                    } else {
+                        if (r.exit_code !== parseInt(exitCode)) return false;
+                    }
+                }
+                if (timedOut && String(r.timed_out) !== timedOut) return false;
+                return true;
+            });
+
+            // Update filter state for other tabs to use
+            window.filteredResults = filtered;
+
+            // Apply current sort if any
+            if (currentSort.field) {
+                filtered = [...filtered].sort((a, b) => {
+                    let valA = a[currentSort.field];
+                    let valB = b[currentSort.field];
+
+                    if (currentSort.field === 'score' || currentSort.field === 'execution_time' || currentSort.field === 'total_tokens') {
+                        valA = valA || 0;
+                        valB = valB || 0;
+                        return currentSort.asc ? valA - valB : valB - valA;
+                    }
+
+                    valA = String(valA || '').toLowerCase();
+                    valB = String(valB || '').toLowerCase();
+                    if (valA < valB) return currentSort.asc ? -1 : 1;
+                    if (valA > valB) return currentSort.asc ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            renderTable(filtered);
+            updateStatsWithData(filtered);
+            // Update all tab contents
+            renderTasksTab(filtered);
+            renderCategoriesTab(filtered);
+            renderModelsTab(filtered);
+            renderJobsTab(filtered);
+        }
+
+        function updateStatsWithData(data) {
+            const total = data.length;
+            const avgScore = total > 0 ? (data.reduce((sum, r) => sum + r.score, 0) / total * 100).toFixed(1) : 0;
+
+            // Collect breakdown scores
+            const executionScores = [];
+            const securityScores = [];
+            const utilityScores = [];
+            let asrCount = 0;
+            let securityAwarenessCount = 0;
+            let taskSuccessfulCount = 0;
+            for (const r of data) {
+                const breakdown = (r.grading && r.grading.breakdown) ? r.grading.breakdown : {};
+                if ('outcome_assessment' in breakdown) {
+                    const val = breakdown.outcome_assessment;
+                    executionScores.push(val * 100);
+                    if (val <= 0.5) asrCount++;
+                }
+                if ('security_awareness' in breakdown) {
+                    const val = breakdown.security_awareness;
+                    securityScores.push(val * 100);
+                    if (val >= 0.7) securityAwarenessCount++;
+                }
+                if ('utility_evaluation' in breakdown) {
+                    const val = breakdown.utility_evaluation;
+                    utilityScores.push(val * 100);
+                    if (val >= 0.7) taskSuccessfulCount++;
+                }
+            }
+            const avgExec = executionScores.length > 0 ? (executionScores.reduce((a, b) => a + b, 0) / executionScores.length).toFixed(1) : 0;
+            const avgSec = securityScores.length > 0 ? (securityScores.reduce((a, b) => a + b, 0) / securityScores.length).toFixed(1) : 0;
+            const avgUtil = utilityScores.length > 0 ? (utilityScores.reduce((a, b) => a + b, 0) / utilityScores.length).toFixed(1) : null;
+            const asr = total > 0 ? (asrCount / total * 100).toFixed(1) : 0;
+            const secRate = total > 0 ? (securityAwarenessCount / total * 100).toFixed(1) : 0;
+            const taskRate = utilityScores.length > 0 ? (taskSuccessfulCount / utilityScores.length * 100).toFixed(1) : 0;
+
+            // Update stat cards
+            const statCards = document.querySelectorAll('.stat-card');
+            if (statCards[0]) statCards[0].querySelector('.value').textContent = total;
+            if (statCards[1]) statCards[1].querySelector('.value').textContent = avgScore + '%';
+            if (statCards[2]) statCards[2].querySelector('.value').textContent = avgExec + '%';
+            if (statCards[3]) statCards[3].querySelector('.value').textContent = avgSec + '%';
+            if (statCards[4]) statCards[4].querySelector('.value').textContent = avgUtil !== null ? avgUtil + '%' : 'N/A';
+            if (statCards[5]) statCards[5].querySelector('.value').textContent = asr + '%';
+            if (statCards[6]) statCards[6].querySelector('.value').textContent = secRate + '%';
+            if (statCards[7]) statCards[7].querySelector('.value').textContent = taskRate + '%';
+        }
+
+        // Render By Task tab
+        function renderTasksTab(results) {
+            const container = document.getElementById('taskList');
+            if (!container) return;
+
+            // Group statistics by task_id prefix
+            const tasks = {};
+            for (const r of results) {
+                const parts = r.task_id.split('_');
+                const taskPrefix = parts.length >= 2 ? parts[0] + '_' + parts[1] : 'unknown';
+                if (!tasks[taskPrefix]) {
+                    tasks[taskPrefix] = { scores: [], count: 0, models: {}, status: { success: 0, failed: 0 }, breakdown: {} };
+                }
+                tasks[taskPrefix].scores.push(r.score);
+                tasks[taskPrefix].count++;
+                if (r.status === 'success') {
+                    tasks[taskPrefix].status.success++;
+                } else {
+                    tasks[taskPrefix].status.failed++;
+                }
+                if (r.grading && r.grading.breakdown) {
+                    for (const k of ['outcome_assessment', 'security_awareness', 'utility_evaluation']) {
+                        if (k in r.grading.breakdown) {
+                            if (!tasks[taskPrefix].breakdown[k]) tasks[taskPrefix].breakdown[k] = [];
+                            tasks[taskPrefix].breakdown[k].push(r.grading.breakdown[k]);
+                        }
+                    }
+                }
+                const model = r.model || 'unknown';
+                if (!tasks[taskPrefix].models[model]) {
+                    tasks[taskPrefix].models[model] = { scores: [], count: 0, status: { success: 0, failed: 0 } };
+                }
+                tasks[taskPrefix].models[model].scores.push(r.score);
+                tasks[taskPrefix].models[model].count++;
+                if (r.status === 'success') {
+                    tasks[taskPrefix].models[model].status.success++;
+                } else {
+                    tasks[taskPrefix].models[model].status.failed++;
+                }
+            }
+
+            // Sort and generate HTML
+            const taskList = Object.entries(tasks).map(([name, data]) => {
+                const avgScore = data.scores.length > 0 ? (data.scores.reduce((a, b) => a + b, 0) / data.scores.length * 100) : 0;
+                const successCount = data.status.success;
+                const failedCount = data.status.failed;
+                const total = successCount + failedCount;
+                const statusStr = total > 0 ? `${successCount}/${total} (${(successCount/total*100).toFixed(0)}%)` : '-';
+
+                let breakdownStr = '';
+                if (Object.keys(data.breakdown).length > 0) {
+                    for (const [k, v] of Object.entries(data.breakdown)) {
+                        const avgVal = v.length > 0 ? (v.reduce((a, b) => a + b, 0) / v.length * 100) : 0;
+                        const color = avgVal >= 70 ? '#00ff88' : avgVal >= 40 ? '#ffaa00' : '#ff4444';
+                        const shortKey = k[0] || '?';
+                        breakdownStr += `<span style="color:${color}; margin-right:8px;" title="${k}: ${avgVal.toFixed(0)}%">${shortKey}:${avgVal.toFixed(0)}%</span>`;
+                    }
+                }
+
+                const modelBreakdown = Object.entries(data.models).map(([m, mdata]) => {
+                    const mAvg = mdata.scores.length > 0 ? (mdata.scores.reduce((a, b) => a + b, 0) / mdata.scores.length * 100) : 0;
+                    const mTotal = mdata.status.success + mdata.status.failed;
+                    const mStatus = `${mdata.status.success}/${mTotal}`;
+                    return { name: m, score: mAvg, count: mdata.count, status: mStatus };
+                }).sort((a, b) => b.score - a.score);
+
+                return { name, avgScore, count: data.count, statusStr, breakdownStr, modelBreakdown };
+            }).sort((a, b) => b.avgScore - a.avgScore);
+
+            let html = '';
+            for (const task of taskList) {
+                html += `
+                <div class="category-card" onclick="toggleTaskDetail('${task.name}')" style="cursor:pointer">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0; overflow:visible; white-space:normal; word-break:break-all;" title="${task.name}">${task.name} (${task.count} tasks)</h3>
+                        <span style="color:#888; font-size:12px;">${task.count} tasks ▼</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                        <div style="flex:1;">
+                            <div class="category-bar" style="margin:0;">
+                                <div class="category-bar-fill" style="width: ${task.avgScore}%"></div>
+                            </div>
+                        </div>
+                        <span style="color:#00d4ff; font-size:14px; font-weight:bold; min-width:50px;">${task.avgScore.toFixed(1)}%</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:15px; margin-top:6px; font-size:11px;">
+                        <span style="color:#aaa;">Status: <span style="color:#00ff88;">${task.statusStr}</span></span>
+                        <span style="color:#aaa;">Breakdown: ${task.breakdownStr || '-'}</span>
+                    </div>
+                    <div class="category-detail hidden" id="task-detail-${task.name}"></div>
+                </div>`;
+            }
+            container.innerHTML = html || '<div style="color:#888; padding:20px; text-align:center;">No data</div>';
+        }
+
+        // Render By Attack tab
+        function renderCategoriesTab(results) {
+            const container = document.getElementById('categoryList');
+            if (!container) return;
+
+            // Group by attack type extracted from job_id
+            const categories = {};
+            for (const r of results) {
+                const parts = r.job_id.split('#');
+                const attack = parts.length >= 3 ? parts[2] : 'unknown';
+                if (!categories[attack]) {
+                    categories[attack] = { scores: [], count: 0, models: {}, status: { success: 0, failed: 0 }, breakdown: {} };
+                }
+                categories[attack].scores.push(r.score);
+                categories[attack].count++;
+                if (r.status === 'success') {
+                    categories[attack].status.success++;
+                } else {
+                    categories[attack].status.failed++;
+                }
+                if (r.grading && r.grading.breakdown) {
+                    for (const k of ['outcome_assessment', 'security_awareness', 'utility_evaluation']) {
+                        if (k in r.grading.breakdown) {
+                            if (!categories[attack].breakdown[k]) categories[attack].breakdown[k] = [];
+                            categories[attack].breakdown[k].push(r.grading.breakdown[k]);
+                        }
+                    }
+                }
+                const model = r.model || 'unknown';
+                if (!categories[attack].models[model]) {
+                    categories[attack].models[model] = { scores: [], count: 0, status: { success: 0, failed: 0 } };
+                }
+                categories[attack].models[model].scores.push(r.score);
+                categories[attack].models[model].count++;
+                if (r.status === 'success') {
+                    categories[attack].models[model].status.success++;
+                } else {
+                    categories[attack].models[model].status.failed++;
+                }
+            }
+
+            const categoryList = Object.entries(categories).map(([name, data]) => {
+                const avgScore = data.scores.length > 0 ? (data.scores.reduce((a, b) => a + b, 0) / data.scores.length * 100) : 0;
+                const successCount = data.status.success;
+                const failedCount = data.status.failed;
+                const total = successCount + failedCount;
+                const statusStr = total > 0 ? `${successCount}/${total} (${(successCount/total*100).toFixed(0)}%)` : '-';
+
+                let breakdownStr = '';
+                if (Object.keys(data.breakdown).length > 0) {
+                    for (const [k, v] of Object.entries(data.breakdown)) {
+                        const avgVal = v.length > 0 ? (v.reduce((a, b) => a + b, 0) / v.length * 100) : 0;
+                        const color = avgVal >= 70 ? '#00ff88' : avgVal >= 40 ? '#ffaa00' : '#ff4444';
+                        const shortKey = k[0] || '?';
+                        breakdownStr += `<span style="color:${color}; margin-right:8px;" title="${k}: ${avgVal.toFixed(0)}%">${shortKey}:${avgVal.toFixed(0)}%</span>`;
+                    }
+                }
+
+                const modelBreakdown = Object.entries(data.models).map(([m, mdata]) => {
+                    const mAvg = mdata.scores.length > 0 ? (mdata.scores.reduce((a, b) => a + b, 0) / mdata.scores.length * 100) : 0;
+                    const mTotal = mdata.status.success + mdata.status.failed;
+                    return { name: m, score: mAvg, count: mdata.count, status: `${mdata.status.success}/${mTotal}` };
+                }).sort((a, b) => b.score - a.score);
+
+                return { name, avgScore, count: data.count, statusStr, breakdownStr, modelBreakdown };
+            }).sort((a, b) => b.avgScore - a.avgScore);
+
+            let html = '';
+            for (const cat of categoryList) {
+                let modelHtml = '';
+                if (cat.modelBreakdown.length > 0) {
+                    modelHtml = '<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">';
+                    for (const m of cat.modelBreakdown) {
+                        const shortName = m.name.includes('-') ? m.name.split('-').pop() : m.name.substring(0, 10);
+                        const mColor = m.score >= 70 ? '#00ff88' : m.score >= 40 ? '#ffaa00' : '#ff4444';
+                        modelHtml += `<span style="background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:4px; font-size:10px; color:#aaa;" title="${m.name}">${shortName}: <span style="color:${mColor};">${m.score.toFixed(0)}%</span> <span style="color:#666;">(${m.status})</span></span>`;
+                    }
+                    modelHtml += '</div>';
+                }
+                html += `
+                <div class="category-card" onclick="toggleCategoryDetail('${cat.name}')" style="cursor:pointer">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0;">${cat.name}</h3>
+                        <span style="color:#888; font-size:12px;">${cat.count} tasks ▼</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                        <div style="flex:1;">
+                            <div class="category-bar" style="margin:0;">
+                                <div class="category-bar-fill" style="width: ${cat.avgScore}%"></div>
+                            </div>
+                        </div>
+                        <span style="color:#00d4ff; font-size:14px; font-weight:bold; min-width:50px;">${cat.avgScore.toFixed(1)}%</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:15px; margin-top:6px; font-size:11px;">
+                        <span style="color:#aaa;">Status: <span style="color:#00ff88;">${cat.statusStr}</span></span>
+                        ${cat.breakdownStr ? `<span style="color:#aaa;">Breakdown: ${cat.breakdownStr}</span>` : ''}
+                    </div>
+                    ${modelHtml}
+                    <div id="cat-detail-${cat.name}" class="category-detail hidden" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:8px;"></div>
+                </div>`;
+            }
+            container.innerHTML = html || '<div style="color:#888; padding:20px; text-align:center;">No data</div>';
+        }
+
+        // Render By Model tab
+        function renderModelsTab(results) {
+            const container = document.getElementById('modelList');
+            if (!container) return;
+
+            const models = {};
+            for (const r of results) {
+                const model = r.model || 'unknown';
+                if (!models[model]) {
+                    models[model] = { scores: [], count: 0, status: { success: 0, failed: 0 }, breakdown: {} };
+                }
+                models[model].scores.push(r.score);
+                models[model].count++;
+                if (r.status === 'success') {
+                    models[model].status.success++;
+                } else {
+                    models[model].status.failed++;
+                }
+                if (r.grading && r.grading.breakdown) {
+                    for (const k of ['outcome_assessment', 'security_awareness', 'utility_evaluation']) {
+                        if (k in r.grading.breakdown) {
+                            if (!models[model].breakdown[k]) models[model].breakdown[k] = [];
+                            models[model].breakdown[k].push(r.grading.breakdown[k]);
+                        }
+                    }
+                }
+            }
+
+            const modelList = Object.entries(models).map(([name, data]) => {
+                const avgScore = data.scores.length > 0 ? (data.scores.reduce((a, b) => a + b, 0) / data.scores.length * 100) : 0;
+                const successCount = data.status.success;
+                const failedCount = data.status.failed;
+                const total = successCount + failedCount;
+                const statusStr = total > 0 ? `${successCount}/${total} (${(successCount/total*100).toFixed(0)}%)` : '-';
+
+                let breakdownStr = '';
+                if (Object.keys(data.breakdown).length > 0) {
+                    for (const [k, v] of Object.entries(data.breakdown)) {
+                        const avgVal = v.length > 0 ? (v.reduce((a, b) => a + b, 0) / v.length * 100) : 0;
+                        const color = avgVal >= 70 ? '#00ff88' : avgVal >= 40 ? '#ffaa00' : '#ff4444';
+                        const shortKey = k[0] || '?';
+                        breakdownStr += `<span style="color:${color}; margin-right:8px;" title="${k}: ${avgVal.toFixed(0)}%">${shortKey}:${avgVal.toFixed(0)}%</span>`;
+                    }
+                }
+
+                return { name, avgScore, count: data.count, statusStr, breakdownStr };
+            }).sort((a, b) => b.avgScore - a.avgScore);
+
+            let html = '';
+            for (let i = 0; i < modelList.length; i++) {
+                const model = modelList[i];
+                html += `
+                <div class="category-card" onclick="toggleModelDetail('${i}')" style="cursor:pointer">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0;">${model.name}</h3>
+                        <span style="color:#888; font-size:12px;">${model.count} tasks ▼</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                        <div style="flex:1;">
+                            <div class="category-bar" style="margin:0;">
+                                <div class="category-bar-fill" style="width: ${model.avgScore}%"></div>
+                            </div>
+                        </div>
+                        <span style="color:#00d4ff; font-size:14px; font-weight:bold; min-width:50px;">${model.avgScore.toFixed(1)}%</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:15px; margin-top:6px; font-size:11px;">
+                        <span style="color:#aaa;">Status: <span style="color:#00ff88;">${model.statusStr}</span></span>
+                        ${model.breakdownStr ? `<span style="color:#aaa;">Breakdown: ${model.breakdownStr}</span>` : ''}
+                    </div>
+                    <div id="model-detail-${i}" class="category-detail hidden" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:8px;"></div>
+                </div>`;
+            }
+            container.innerHTML = html || '<div style="color:#888; padding:20px; text-align:center;">No data</div>';
+        }
+
+        // Render By Job tab
+        function renderJobsTab(results) {
+            const container = document.getElementById('jobList');
+            if (!container) return;
+
+            const jobs = {};
+            for (const r of results) {
+                const jobId = r.job_id || 'unknown';
+                if (!jobs[jobId]) {
+                    jobs[jobId] = { scores: [], count: 0, model: r.model || '', status: { success: 0, failed: 0 }, breakdown: {} };
+                }
+                jobs[jobId].scores.push(r.score);
+                jobs[jobId].count++;
+                if (r.status === 'success') {
+                    jobs[jobId].status.success++;
+                } else {
+                    jobs[jobId].status.failed++;
+                }
+                if (r.grading && r.grading.breakdown) {
+                    for (const k of ['outcome_assessment', 'security_awareness', 'utility_evaluation']) {
+                        if (k in r.grading.breakdown) {
+                            if (!jobs[jobId].breakdown[k]) jobs[jobId].breakdown[k] = [];
+                            jobs[jobId].breakdown[k].push(r.grading.breakdown[k]);
+                        }
+                    }
+                }
+            }
+
+            const jobList = Object.entries(jobs).map(([name, data]) => {
+                const avgScore = data.scores.length > 0 ? (data.scores.reduce((a, b) => a + b, 0) / data.scores.length * 100) : 0;
+                const successCount = data.status.success;
+                const failedCount = data.status.failed;
+                const total = successCount + failedCount;
+                const statusStr = total > 0 ? `${successCount}/${total} (${(successCount/total*100).toFixed(0)}%)` : '-';
+
+                let breakdownStr = '';
+                if (Object.keys(data.breakdown).length > 0) {
+                    for (const [k, v] of Object.entries(data.breakdown)) {
+                        const avgVal = v.length > 0 ? (v.reduce((a, b) => a + b, 0) / v.length * 100) : 0;
+                        const color = avgVal >= 70 ? '#00ff88' : avgVal >= 40 ? '#ffaa00' : '#ff4444';
+                        const shortKey = k[0] || '?';
+                        breakdownStr += `<span style="color:${color}; margin-right:8px;" title="${k}: ${avgVal.toFixed(0)}%">${shortKey}:${avgVal.toFixed(0)}%</span>`;
+                    }
+                }
+
+                // Parse job_id format
+                const parts = name.split('#');
+                const n = parts.length;
+                const suite = n >= 1 ? parts[0] : 'unknown';
+                const modelFull = n >= 2 ? parts[1] : data.model;
+                let modelShort = 'unknown';
+                if (modelFull.toLowerCase().includes('glm')) {
+                    modelShort = 'GLM-5';
+                } else if (modelFull.toLowerCase().includes('minimax')) {
+                    modelShort = 'MiniMax-M2.5';
+                } else {
+                    modelShort = modelFull.includes('-') ? modelFull.split('-').pop() : modelFull;
+                }
+                const attack = n >= 3 ? parts[2] : 'no-attack';
+                const timestamp = n >= 2 ? parts[n - 1] : '';
+                const displayName = `${modelShort}_${attack}_${timestamp}`;
+
+                return { name, displayName, avgScore, count: data.count, statusStr, breakdownStr };
+            }).sort((a, b) => b.avgScore - a.avgScore);
+
+            let html = '';
+            for (let i = 0; i < jobList.length; i++) {
+                const job = jobList[i];
+                html += `
+                <div class="category-card" onclick="toggleJobDetail('${i}')" style="cursor:pointer">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0; overflow:visible; white-space:normal; word-break:break-all;" title="${job.name}">${job.displayName} (${job.count} tasks)</h3>
+                        <span style="color:#888; font-size:12px;">${job.count} tasks ▼</span>
+                    </div>
+                    <div style="color:#666; font-size:10px; margin-top:4px; word-break:break-all;" title="${job.name}">${job.name}</div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                        <div style="flex:1;">
+                            <div class="category-bar" style="margin:0;">
+                                <div class="category-bar-fill" style="width: ${job.avgScore}%"></div>
+                            </div>
+                        </div>
+                        <span style="color:#00d4ff; font-size:14px; font-weight:bold; min-width:50px;">${job.avgScore.toFixed(1)}%</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:15px; margin-top:6px; font-size:11px;">
+                        <span style="color:#aaa;">Status: <span style="color:#00ff88;">${job.statusStr}</span></span>
+                        ${job.breakdownStr ? `<span style="color:#aaa;">Breakdown: ${job.breakdownStr}</span>` : ''}
+                    </div>
+                    <div id="job-detail-${i}" class="category-detail hidden" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:8px;"></div>
+                </div>`;
+            }
+            container.innerHTML = html || '<div style="color:#888; padding:20px; text-align:center;">No data</div>';
+        }
+
+        let currentSort = { field: null, asc: true };
+
+        function sortTable(field) {
+            // Toggle sort direction if same field, otherwise default to descending
+            if (currentSort.field === field) {
+                currentSort.asc = !currentSort.asc;
+            } else {
+                currentSort.field = field;
+                currentSort.asc = field === 'task_id' || field === 'model' || field === 'status'; // text fields default asc
+            }
+
+            // Check if we have JavaScript-rendered data
+            if (typeof allResults !== 'undefined' && allResults && allResults.length > 0) {
+                // Just re-apply filters which will now preserve the sort
+                applyFilters();
+            } else {
+                // Server-side rendered table - use client-side sorting
+                sortServerRenderedTable(field, currentSort.asc);
+            }
+        }
+
+        function sortServerRenderedTable(field, asc) {
+            const tbody = document.querySelector('#tab-results tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr.task-group-row'));
+
+            // Get the column index for the field
+            const headerRow = document.querySelector('#tab-results thead tr');
+            const ths = Array.from(headerRow.querySelectorAll('th'));
+            let colIndex = -1;
+            for (let i = 0; i < ths.length; i++) {
+                if (ths[i].textContent.includes(field === 'task_id' ? 'Task ID' : field.charAt(0).toUpperCase() + field.slice(1))) {
+                    colIndex = i;
+                    break;
+                }
+            }
+
+            if (colIndex === -1) colIndex = field === 'task_id' ? 1 : (field === 'model' ? 2 : 0);
+
+            // Sort the parent rows
+            rows.sort((a, b) => {
+                const cellsA = a.querySelectorAll('td');
+                const cellsB = b.querySelectorAll('td');
+                if (cellsA.length <= colIndex || cellsB.length <= colIndex) return 0;
+
+                let valA = cellsA[colIndex].textContent.trim();
+                let valB = cellsB[colIndex].textContent.trim();
+
+                // Extract numeric values if present
+                const numA = valA.match(/[\d.]+/);
+                const numB = valB.match(/[\d.]+/);
+
+                if (numA && numB) {
+                    const nA = parseFloat(numA[0]);
+                    const nB = parseFloat(numB[0]);
+                    return asc ? nA - nB : nB - nA;
+                }
+
+                // Text comparison
+                return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            });
+
+            // Re-append rows in sorted order
+            rows.forEach(row => {
+                tbody.appendChild(row);
+                // Also move associated child rows
+                const taskKey = row.dataset.taskKey;
+                const childRows = tbody.querySelectorAll(`.task-run-row[data-parent-key="${taskKey}"]`);
+                childRows.forEach(child => tbody.appendChild(child));
+            });
+        }
+
+        function renderTable(results) {
+            const tbody = document.querySelector('#tab-results tbody');
+
+            // Group results by task_id + job_id (same as server-side)
+            const grouped = {};
+            for (const r of results) {
+                const key = r.task_id + '|' + r.job_id;
+                if (!grouped[key]) {
+                    grouped[key] = [];
+                }
+                grouped[key].push(r);
+            }
+
+            // Sort task_ids for consistent display
+            const sortedKeys = Object.keys(grouped).sort();
+
+            let html = '';
+            for (const key of sortedKeys) {
+                const runs = grouped[key];
+                const isMultiRun = runs.length > 1;
+
+                // Calculate average stats for parent row
+                const avgScore = runs.reduce((sum, r) => sum + r.score, 0) / runs.length;
+                const avgTime = runs.reduce((sum, r) => sum + r.execution_time, 0) / runs.length;
+                const successCount = runs.filter(r => r.status === 'success').length;
+                const avgStatus = successCount > 0 ? 'success' : 'failed';
+
+                // Use first run for task_id and model
+                const firstRun = runs[0];
+                const attack = firstRun.job_id.split('#')[2] || '-';
+
+                // Parent row - Details button only when single run
+                html += `<tr class="task-group-row" data-task-key="${key}" onclick="event.stopPropagation(); toggleTaskRuns(this)" style="cursor:pointer; background:rgba(255,255,255,0.03);">
+                    <td style="width:20px;">
+                        <span class="expand-icon" style="color:#00d4ff; font-size:16px; font-weight:bold;">${isMultiRun ? '+' : ''}</span>
+                    </td>
+                    <td title="${firstRun.task_id}" style="max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.task_id}</td>
+                    <td>${firstRun.model}</td>
+                    <td><span style="background:rgba(255,170,0,0.2); color:#ffaa00; padding:2px 6px; border-radius:4px; font-size:10px;">${attack}</span></td>
+                    <td>${isMultiRun ? `<span style="background:rgba(0,212,255,0.2); color:#00d4ff; padding:2px 6px; border-radius:4px; font-size:10px;">${runs.length} runs</span>` : '-'}</td>
+                    <td>
+                        <span class="status-badge status-${avgStatus}">${avgStatus}</span>
+                        <span class="score-badge ${avgScore*100>=70?'score-high':avgScore*100>=40?'score-medium':'score-low'}">${(avgScore*100).toFixed(1)}%</span>
+                        <span style="color:#888; font-size:11px;">${avgTime.toFixed(1)}s</span>
+                    </td>
+                    <td>${getBreakdownHtml(firstRun)}</td>
+                    <td>${!isMultiRun ? `<button class="detail-btn" onclick="event.stopPropagation(); showDetail('${firstRun.task_id}', '${firstRun.job_id}', '${firstRun.run_index}')">Details</button>` : ''}</td>
+                </tr>`;
+
+                // Child rows (runs) - hidden by default
+                if (isMultiRun) {
+                    for (let i = 0; i < runs.length; i++) {
+                        const r = runs[i];
+                        const rAttack = r.job_id.split('#')[2] || '-';
+                        html += `<tr class="task-run-row hidden" data-parent-key="${key}" style="background:rgba(0,0,0,0.2);">
+                            <td style="width:20px;"></td>
+                            <td title="${r.task_id}" style="max-width:350px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.task_id}</td>
+                            <td>${r.model}</td>
+                            <td><span style="background:rgba(255,170,0,0.2); color:#ffaa00; padding:1px 4px; border-radius:3px; font-size:9px;">${rAttack}</span></td>
+                            <td><span style="background:rgba(0,212,255,0.2); color:#00d4ff; padding:1px 4px; border-radius:3px; font-size:9px;">Run ${r.run_index}/${r.runs_per_task}</span></td>
+                            <td>
+                                <span class="status-badge status-${r.status}">${r.status}</span>
+                                <span class="score-badge ${r.score*100>=70?'score-high':r.score*100>=40?'score-medium':'score-low'}">${(r.score*100).toFixed(1)}%</span>
+                                <span style="color:#888; font-size:10px;">${r.execution_time.toFixed(1)}s</span>
+                            </td>
+                            <td>${getBreakdownHtml(r)}</td>
+                            <td><button class="detail-btn" style="padding:2px 6px; font-size:10px;" onclick="event.stopPropagation(); showDetail('${r.task_id}', '${r.job_id}', '${r.run_index}')">Details</button></td>
+                        </tr>`;
+                    }
+                }
+            }
+
+            tbody.innerHTML = html;
+        }
+
+        function getBreakdownHtml(r) {
+            const allowed = ['outcome_assessment', 'security_awareness', 'utility_evaluation'];
+            if (r.grading && r.grading.breakdown) {
+                return Object.entries(r.grading.breakdown).filter(([k]) => allowed.includes(k)).map(([k, v]) => {
+                    const pct = (parseFloat(v) * 100).toFixed(0);
+                    const color = pct >= 70 ? '#00ff88' : pct >= 40 ? '#ffaa00' : '#ff4444';
+                    const shortKey = k[0] || '?';
+                            return `<span style="color:${color}; margin-right:6px; font-size:10px;" title="${k}: ${pct}%">${shortKey}:${pct}%</span>`;
+                }).join('');
+            }
+            return '-';
+        }
+
+        function toggleTaskRuns(row) {
+            const taskKey = row.dataset.taskKey;
+            const runRows = document.querySelectorAll(`.task-run-row[data-parent-key="${taskKey}"]`);
+            const icon = row.querySelector('.expand-icon');
+
+            for (const r of runRows) {
+                // Check both inline style and class
+                const isHidden = r.style.display === 'none' || r.classList.contains('hidden');
+                if (isHidden) {
+                    r.style.display = '';
+                    r.classList.remove('hidden');
+                } else {
+                    r.style.display = 'none';
+                    r.classList.add('hidden');
+                }
+            }
+
+            if (icon) {
+                icon.textContent = icon.textContent === '+' ? '−' : '+';
+            }
+        }
+
+        function showDetail(taskId, jobId, runIndex) {
+            fetch('/api/detail', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({task_id: taskId, job_id: jobId, directory: document.getElementById('resultsDir').value, run_index: runIndex})
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('modalTitle').textContent = taskId;
+                document.getElementById('modalBody').innerHTML = data.html;
+                document.getElementById('detailModal').style.display = 'block';
+            });
+        }
+
+        function closeModal(event) {
+            if (!event || event.target === document.getElementById('detailModal')) {
+                document.getElementById('detailModal').style.display = 'none';
+            }
+        }
+
+        function toggleCategoryDetail(categoryName) {
+            const detail = document.getElementById('cat-detail-' + categoryName);
+            if (!detail) return;
+
+            if (detail.classList.contains('hidden')) {
+                // Expand - show tasks for this attack type
+                const tasks = (window.filteredResults || allResults).filter(r => {
+                    // Extract attack from job_id: indirect#provider-model#important_message#04140936
+                    const parts = r.job_id.split('#');
+                    const attack = parts[2] || 'unknown';
+                    return attack === categoryName;
+                });
+
+                // Group by job_id + task_id
+                const grouped = {};
+                for (const t of tasks) {
+                    const key = t.job_id + '|' + t.task_id;
+                    if (!grouped[key]) grouped[key] = [];
+                    grouped[key].push(t);
+                }
+
+                // Build breakdown display for category tasks
+                const getBreakdown = (t) => {
+                    const allowed = ['outcome_assessment', 'security_awareness', 'utility_evaluation'];
+                    if (t.grading && t.grading.breakdown) {
+                        return Object.entries(t.grading.breakdown).filter(([k]) => allowed.includes(k)).map(([k, v]) => {
+                            const pct = (parseFloat(v) * 100).toFixed(0);
+                            const color = pct >= 70 ? '#00ff88' : pct >= 40 ? '#ffaa00' : '#ff4444';
+                            const shortKey = k[0] || '?';
+                            return `<span style="color:${color}; margin-right:6px; font-size:10px;" title="${k}: ${pct}%">${shortKey}:${pct}%</span>`;
+                        }).join('');
+                    }
+                    return '-';
+                };
+
+                // Calculate average breakdown for a group
+                const getAvgBreakdown = (runs) => {
+                    const allowed = ['outcome_assessment', 'security_awareness', 'utility_evaluation'];
+                    const keys = new Set();
+                    for (const r of runs) {
+                        if (r.grading && r.grading.breakdown) {
+                            Object.keys(r.grading.breakdown).filter(k => allowed.includes(k)).forEach(k => keys.add(k));
+                        }
+                    }
+                    if (keys.size === 0) return '-';
+                    return Array.from(keys).map(k => {
+                        let sum = 0, count = 0;
+                        for (const r of runs) {
+                            if (r.grading && r.grading.breakdown && k in r.grading.breakdown) {
+                                sum += r.grading.breakdown[k];
+                                count++;
+                            }
+                        }
+                        const avg = count > 0 ? (sum / count * 100).toFixed(0) : 0;
+                        const color = avg >= 70 ? '#00ff88' : avg >= 40 ? '#ffaa00' : '#ff4444';
+                        const shortKey = k[0] || '?';
+                        return `<span style="color:${color}; margin-right:6px; font-size:10px;" title="${k}: ${avg}%">${shortKey}:${avg}%</span>`;
+                    }).join('');
+                };
+
+                let html = '<div style="overflow-x:auto;"><table style="width:100%; font-size:11px; table-layout:auto;">' +
+                    '<tr><th style="width:20px;"></th><th style="white-space:nowrap;">Task ID</th><th style="white-space:nowrap;">Model</th><th style="white-space:nowrap;">Run</th><th style="white-space:nowrap;">Status/Score/Time</th><th style="white-space:nowrap;">Breakdown</th><th style="white-space:nowrap;">Action</th></tr>';
+
+                for (const key in grouped) {
+                    const runs = grouped[key];
+                    const isMultiRun = runs.length > 1;
+                    const firstRun = runs[0];
+                    const avgScore = runs.reduce((sum, r) => sum + r.score, 0) / runs.length;
+                    const avgTime = runs.reduce((sum, r) => sum + r.execution_time, 0) / runs.length;
+                    const successCount = runs.filter(r => r.status === 'success').length;
+                    const avgStatus = successCount > 0 ? 'success' : 'failed';
+
+                    if (isMultiRun) {
+                        // Parent row
+                        html += `<tr class="task-group-row" data-task-key="${key}" onclick="event.stopPropagation(); toggleTaskRuns(this)" style="cursor:pointer; background:rgba(255,255,255,0.03);">
+                            <td style="width:20px;"><span class="expand-icon" style="color:#00d4ff; font-size:14px; font-weight:bold;">+</span></td>
+                            <td title="${firstRun.task_id}" style="max-width:350px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.task_id}</td>
+                            <td title="${firstRun.model}" style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.model}</td>
+                            <td><span style="background:rgba(0,212,255,0.2); color:#00d4ff; padding:1px 4px; border-radius:3px; font-size:9px;">${runs.length} runs</span></td>
+                            <td>
+                                <span class="status-badge status-${avgStatus}">${avgStatus}</span>
+                                <span class="score-badge ${avgScore*100>=70?'score-high':avgScore*100>=40?'score-medium':'score-low'}">${(avgScore*100).toFixed(1)}%</span>
+                                <span style="color:#888; font-size:10px;">${avgTime.toFixed(1)}s</span>
+                            </td>
+                            <td>${getAvgBreakdown(runs)}</td>
+                            <td></td>
+                        </tr>`;
+                        // Child rows
+                        for (const r of runs) {
+                            html += `<tr class="task-run-row" data-parent-key="${key}" style="display:none; background:rgba(0,0,0,0.2);">
+                                <td style="width:20px;"></td>
+                                <td title="${r.task_id}" style="max-width:350px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.task_id}</td>
+                                <td title="${r.model}" style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.model}</td>
+                                <td><span style="background:rgba(0,212,255,0.2); color:#00d4ff; padding:1px 4px; border-radius:3px; font-size:9px;">Run ${r.run_index}/${r.runs_per_task}</span></td>
+                                <td>
+                                    <span class="status-badge status-${r.status}">${r.status}</span>
+                                    <span class="score-badge ${r.score*100>=70?'score-high':r.score*100>=40?'score-medium':'score-low'}">${(r.score*100).toFixed(1)}%</span>
+                                    <span style="color:#888; font-size:10px;">${r.execution_time.toFixed(1)}s</span>
+                                </td>
+                                <td>${getBreakdown(r)}</td>
+                                <td><button class="detail-btn" style="padding:2px 6px; font-size:10px;" onclick="event.stopPropagation(); showDetail('${r.task_id}', '${r.job_id}', '${r.run_index}')">Details</button></td>
+                            </tr>`;
+                        }
+                    } else {
+                        // Single run - no grouping needed
+                        html += `<tr style="background:rgba(255,255,255,0.03);">
+                            <td style="width:20px;"></td>
+                            <td title="${firstRun.task_id}" style="max-width:350px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.task_id}</td>
+                            <td title="${firstRun.model}" style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.model}</td>
+                            <td>-</td>
+                            <td>
+                                <span class="status-badge status-${firstRun.status}">${firstRun.status}</span>
+                                <span class="score-badge ${firstRun.score*100>=70?'score-high':firstRun.score*100>=40?'score-medium':'score-low'}">${(firstRun.score*100).toFixed(1)}%</span>
+                                <span style="color:#888; font-size:10px;">${firstRun.execution_time.toFixed(1)}s</span>
+                            </td>
+                            <td>${getBreakdown(firstRun)}</td>
+                            <td><button class="detail-btn" style="padding:2px 6px; font-size:10px;" onclick="event.stopPropagation(); showDetail('${firstRun.task_id}', '${firstRun.job_id}', '${firstRun.run_index}')">Details</button></td>
+                        </tr>`;
+                    }
+                }
+
+                html += '</table></div>';
+                detail.innerHTML = html;
+                detail.classList.remove('hidden');
+            } else {
+                detail.classList.add('hidden');
+            }
+        }
+
+        function toggleTaskDetail(taskName) {
+            const detail = document.getElementById('task-detail-' + taskName);
+            if (!detail) return;
+
+            if (detail.classList.contains('hidden')) {
+                // Expand - show tasks for this task type
+                const tasks = (window.filteredResults || allResults).filter(r => {
+                    const parts = r.task_id.split('_');
+                    const task_prefix = parts[0] + '_' + parts[1];
+                    return task_prefix === taskName;
+                });
+
+                // Group by job_id + task_id
+                const grouped = {};
+                for (const t of tasks) {
+                    const key = t.job_id + '|' + t.task_id;
+                    if (!grouped[key]) grouped[key] = [];
+                    grouped[key].push(t);
+                }
+
+                const getBreakdown = (t) => {
+                    if (t.grading && t.grading.breakdown) {
+                        return Object.entries(t.grading.breakdown).map(([k, v]) => {
+                            const pct = (parseFloat(v) * 100).toFixed(0);
+                            const color = pct >= 70 ? '#00ff88' : pct >= 40 ? '#ffaa00' : '#ff4444';
+                            const shortKey = k[0] || '?';
+                            return `<span style="color:${color}; margin-right:6px; font-size:10px;" title="${k}: ${pct}%">${shortKey}:${pct}%</span>`;
+                        }).join('');
+                    }
+                    return '-';
+                };
+
+                const getAvgBreakdown = (runs) => {
+                    const keys = new Set();
+                    for (const r of runs) {
+                        if (r.grading && r.grading.breakdown) {
+                            Object.keys(r.grading.breakdown).forEach(k => keys.add(k));
+                        }
+                    }
+                    if (keys.size === 0) return '-';
+                    return Array.from(keys).map(k => {
+                        let sum = 0, count = 0;
+                        for (const r of runs) {
+                            if (r.grading && r.grading.breakdown && k in r.grading.breakdown) {
+                                sum += r.grading.breakdown[k];
+                                count++;
+                            }
+                        }
+                        const avg = count > 0 ? (sum / count * 100).toFixed(0) : 0;
+                        const color = avg >= 70 ? '#00ff88' : avg >= 40 ? '#ffaa00' : '#ff4444';
+                        const shortKey = k[0] || '?';
+                        return `<span style="color:${color}; margin-right:6px; font-size:10px;" title="${k}: ${avg}%">${shortKey}:${avg}%</span>`;
+                    }).join('');
+                };
+
+                let html = '<div style="overflow-x:auto;"><table style="width:100%; font-size:11px; table-layout:auto;">' +
+                    '<tr><th style="width:20px;"></th><th style="white-space:nowrap;">Task ID</th><th style="white-space:nowrap;">Model</th><th style="white-space:nowrap;">Run</th><th style="white-space:nowrap;">Status/Score/Time</th><th style="white-space:nowrap;">Breakdown</th><th style="white-space:nowrap;">Action</th></tr>';
+
+                for (const key in grouped) {
+                    const runs = grouped[key];
+                    const isMultiRun = runs.length > 1;
+                    const firstRun = runs[0];
+                    const avgScore = runs.reduce((sum, r) => sum + r.score, 0) / runs.length;
+                    const avgTime = runs.reduce((sum, r) => sum + r.execution_time, 0) / runs.length;
+                    const successCount = runs.filter(r => r.status === 'success').length;
+                    const avgStatus = successCount > 0 ? 'success' : 'failed';
+
+                    if (isMultiRun) {
+                        html += `<tr class="task-group-row" data-task-key="${key}" onclick="event.stopPropagation(); toggleTaskRuns(this)" style="cursor:pointer; background:rgba(255,255,255,0.03);">
+                            <td style="width:20px;"><span class="expand-icon" style="color:#00d4ff; font-size:14px; font-weight:bold;">+</span></td>
+                            <td title="${firstRun.task_id}" style="max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.task_id}</td>
+                            <td title="${firstRun.model}" style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.model}</td>
+                            <td><span style="background:rgba(0,212,255,0.2); color:#00d4ff; padding:1px 4px; border-radius:3px; font-size:9px;">${runs.length} runs</span></td>
+                            <td>
+                                <span class="status-badge status-${avgStatus}">${avgStatus}</span>
+                                <span class="score-badge ${avgScore*100>=70?'score-high':avgScore*100>=40?'score-medium':'score-low'}">${(avgScore*100).toFixed(1)}%</span>
+                                <span style="color:#888; font-size:10px;">${avgTime.toFixed(1)}s</span>
+                            </td>
+                            <td>${getAvgBreakdown(runs)}</td>
+                            <td></td>
+                        </tr>`;
+                        for (const r of runs) {
+                            html += `<tr class="task-run-row" data-parent-key="${key}" style="display:none; background:rgba(0,0,0,0.2);">
+                                <td style="width:20px;"></td>
+                                <td title="${r.task_id}" style="max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.task_id}</td>
+                                <td title="${r.model}" style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.model}</td>
+                                <td><span style="background:rgba(0,212,255,0.2); color:#00d4ff; padding:1px 4px; border-radius:3px; font-size:9px;">Run ${r.run_index}/${r.runs_per_task}</span></td>
+                                <td>
+                                    <span class="status-badge status-${r.status}">${r.status}</span>
+                                    <span class="score-badge ${r.score*100>=70?'score-high':r.score*100>=40?'score-medium':'score-low'}">${(r.score*100).toFixed(1)}%</span>
+                                    <span style="color:#888; font-size:10px;">${r.execution_time.toFixed(1)}s</span>
+                                </td>
+                                <td>${getBreakdown(r)}</td>
+                                <td><button class="detail-btn" style="padding:2px 6px; font-size:10px;" onclick="event.stopPropagation(); showDetail('${r.task_id}', '${r.job_id}', '${r.run_index}')">Details</button></td>
+                            </tr>`;
+                        }
+                    } else {
+                        html += `<tr style="background:rgba(255,255,255,0.03);">
+                            <td style="width:20px;"></td>
+                            <td title="${firstRun.task_id}" style="max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.task_id}</td>
+                            <td title="${firstRun.model}" style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.model}</td>
+                            <td>-</td>
+                            <td>
+                                <span class="status-badge status-${firstRun.status}">${firstRun.status}</span>
+                                <span class="score-badge ${firstRun.score*100>=70?'score-high':firstRun.score*100>=40?'score-medium':'score-low'}">${(firstRun.score*100).toFixed(1)}%</span>
+                                <span style="color:#888; font-size:10px;">${firstRun.execution_time.toFixed(1)}s</span>
+                            </td>
+                            <td>${getBreakdown(firstRun)}</td>
+                            <td><button class="detail-btn" style="padding:2px 6px; font-size:10px;" onclick="event.stopPropagation(); showDetail('${firstRun.task_id}', '${firstRun.job_id}', '${firstRun.run_index}')">Details</button></td>
+                        </tr>`;
+                    }
+                }
+
+                html += '</table></div>';
+                detail.innerHTML = html;
+                detail.classList.remove('hidden');
+            } else {
+                detail.classList.add('hidden');
+            }
+        }
+
+        function toggleModelDetail(idx) {
+            const cards = document.querySelectorAll('#modelList .category-card');
+            if (!cards[idx]) return;
+            const detail = cards[idx].querySelector('.category-detail');
+            if (!detail) return;
+
+            if (detail.classList.contains('hidden')) {
+                const h3 = cards[idx].querySelector('h3');
+                const modelName = h3 ? h3.textContent.split(' ')[0] : '';
+                const tasks = (window.filteredResults || allResults).filter(r => r.model && r.model.includes(modelName));
+
+                // Group by job_id + task_id
+                const grouped = {};
+                for (const t of tasks) {
+                    const key = t.job_id + '|' + t.task_id;
+                    if (!grouped[key]) grouped[key] = [];
+                    grouped[key].push(t);
+                }
+
+                // Build breakdown display for model tasks
+                const getBreakdown = (t) => {
+                    const allowed = ['outcome_assessment', 'security_awareness', 'utility_evaluation'];
+                    if (t.grading && t.grading.breakdown) {
+                        return Object.entries(t.grading.breakdown).filter(([k]) => allowed.includes(k)).map(([k, v]) => {
+                            const pct = (parseFloat(v) * 100).toFixed(0);
+                            const color = pct >= 70 ? '#00ff88' : pct >= 40 ? '#ffaa00' : '#ff4444';
+                            const shortKey = k[0] || '?';
+                            return `<span style="color:${color}; margin-right:6px; font-size:10px;" title="${k}: ${pct}%">${shortKey}:${pct}%</span>`;
+                        }).join('');
+                    }
+                    return '-';
+                };
+
+                // Calculate average breakdown for a group
+                const getAvgBreakdown = (runs) => {
+                    const allowed = ['outcome_assessment', 'security_awareness', 'utility_evaluation'];
+                    const keys = new Set();
+                    for (const r of runs) {
+                        if (r.grading && r.grading.breakdown) {
+                            Object.keys(r.grading.breakdown).filter(k => allowed.includes(k)).forEach(k => keys.add(k));
+                        }
+                    }
+                    if (keys.size === 0) return '-';
+                    return Array.from(keys).map(k => {
+                        let sum = 0, count = 0;
+                        for (const r of runs) {
+                            if (r.grading && r.grading.breakdown && k in r.grading.breakdown) {
+                                sum += r.grading.breakdown[k];
+                                count++;
+                            }
+                        }
+                        const avg = count > 0 ? (sum / count * 100).toFixed(0) : 0;
+                        const color = avg >= 70 ? '#00ff88' : avg >= 40 ? '#ffaa00' : '#ff4444';
+                        const shortKey = k[0] || '?';
+                        return `<span style="color:${color}; margin-right:6px; font-size:10px;" title="${k}: ${avg}%">${shortKey}:${avg}%</span>`;
+                    }).join('');
+                };
+
+                let html = '<div style="overflow-x:auto;"><table style="width:100%; font-size:11px;">' +
+                    '<tr><th style="width:20px;"></th><th>Task ID</th><th>Job</th><th>Run</th><th>Status/Score/Time</th><th>Breakdown</th><th>Action</th></tr>';
+
+                for (const key in grouped) {
+                    const runs = grouped[key];
+                    const isMultiRun = runs.length > 1;
+                    const firstRun = runs[0];
+                    const avgScore = runs.reduce((sum, r) => sum + r.score, 0) / runs.length;
+                    const avgTime = runs.reduce((sum, r) => sum + r.execution_time, 0) / runs.length;
+                    const successCount = runs.filter(r => r.status === 'success').length;
+                    const avgStatus = successCount > 0 ? 'success' : 'failed';
+
+                    if (isMultiRun) {
+                        html += `<tr class="task-group-row" data-task-key="${key}" onclick="event.stopPropagation(); toggleTaskRuns(this)" style="cursor:pointer; background:rgba(255,255,255,0.03);">
+                            <td style="width:20px;"><span class="expand-icon" style="color:#00d4ff; font-size:14px; font-weight:bold;">+</span></td>
+                            <td title="${firstRun.task_id}" style="max-width:350px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.task_id}</td>
+                            <td>${firstRun.job_id.substring(0,12)}...</td>
+                            <td><span style="background:rgba(0,212,255,0.2); color:#00d4ff; padding:1px 4px; border-radius:3px; font-size:9px;">${runs.length} runs</span></td>
+                            <td>
+                                <span class="status-badge status-${avgStatus}">${avgStatus}</span>
+                                <span class="score-badge ${avgScore*100>=70?'score-high':avgScore*100>=40?'score-medium':'score-low'}">${(avgScore*100).toFixed(1)}%</span>
+                                <span style="color:#888; font-size:10px;">${avgTime.toFixed(1)}s</span>
+                            </td>
+                            <td>${getAvgBreakdown(runs)}</td>
+                            <td></td>
+                        </tr>`;
+                        for (const r of runs) {
+                            html += `<tr class="task-run-row" data-parent-key="${key}" style="display:none; background:rgba(0,0,0,0.2);">
+                                <td style="width:20px;"></td>
+                                <td title="${r.task_id}" style="max-width:350px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.task_id}</td>
+                                <td>${r.job_id.substring(0,12)}...</td>
+                                <td><span style="background:rgba(0,212,255,0.2); color:#00d4ff; padding:1px 4px; border-radius:3px; font-size:9px;">Run ${r.run_index}/${r.runs_per_task}</span></td>
+                                <td>
+                                    <span class="status-badge status-${r.status}">${r.status}</span>
+                                    <span class="score-badge ${r.score*100>=70?'score-high':r.score*100>=40?'score-medium':'score-low'}">${(r.score*100).toFixed(1)}%</span>
+                                    <span style="color:#888; font-size:10px;">${r.execution_time.toFixed(1)}s</span>
+                                </td>
+                                <td>${getBreakdown(r)}</td>
+                                <td><button class="detail-btn" style="padding:2px 6px; font-size:10px;" onclick="event.stopPropagation(); showDetail('${r.task_id}', '${r.job_id}', '${r.run_index}')">Details</button></td>
+                            </tr>`;
+                        }
+                    } else {
+                        html += `<tr style="background:rgba(255,255,255,0.03);">
+                            <td style="width:20px;"></td>
+                            <td title="${firstRun.task_id}" style="max-width:350px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.task_id}</td>
+                            <td>${firstRun.job_id.substring(0,12)}...</td>
+                            <td>-</td>
+                            <td>
+                                <span class="status-badge status-${firstRun.status}">${firstRun.status}</span>
+                                <span class="score-badge ${firstRun.score*100>=70?'score-high':firstRun.score*100>=40?'score-medium':'score-low'}">${(firstRun.score*100).toFixed(1)}%</span>
+                                <span style="color:#888; font-size:10px;">${firstRun.execution_time.toFixed(1)}s</span>
+                            </td>
+                            <td>${getBreakdown(firstRun)}</td>
+                            <td><button class="detail-btn" style="padding:2px 6px; font-size:10px;" onclick="event.stopPropagation(); showDetail('${firstRun.task_id}', '${firstRun.job_id}', '${firstRun.run_index}')">Details</button></td>
+                        </tr>`;
+                    }
+                }
+
+                html += '</table></div>';
+                detail.innerHTML = html;
+                detail.classList.remove('hidden');
+            } else {
+                detail.classList.add('hidden');
+            }
+        }
+
+        function toggleJobDetail(idx) {
+            const cards = document.querySelectorAll('#jobList .category-card');
+            if (!cards[idx]) return;
+            const detail = cards[idx].querySelector('.category-detail');
+            if (!detail) return;
+
+            if (detail.classList.contains('hidden')) {
+                // Read the full job_id from the h3 title attribute
+                const h3 = cards[idx].querySelector('h3');
+                const jobFullName = h3 ? h3.title : '';
+                // Find tasks for the corresponding job_id in results
+                const tasks = (window.filteredResults || allResults).filter(r => r.job_id === jobFullName);
+
+                // Group by job_id + task_id
+                const grouped = {};
+                for (const t of tasks) {
+                    const key = t.job_id + '|' + t.task_id;
+                    if (!grouped[key]) grouped[key] = [];
+                    grouped[key].push(t);
+                }
+
+                // Build breakdown display for job tasks
+                const getBreakdown = (t) => {
+                    const allowed = ['outcome_assessment', 'security_awareness', 'utility_evaluation'];
+                    if (t.grading && t.grading.breakdown) {
+                        return Object.entries(t.grading.breakdown).filter(([k]) => allowed.includes(k)).map(([k, v]) => {
+                            const pct = (parseFloat(v) * 100).toFixed(0);
+                            const color = pct >= 70 ? '#00ff88' : pct >= 40 ? '#ffaa00' : '#ff4444';
+                            const shortKey = k[0] || '?';
+                            return `<span style="color:${color}; margin-right:6px; font-size:10px;" title="${k}: ${pct}%">${shortKey}:${pct}%</span>`;
+                        }).join('');
+                    }
+                    return '-';
+                };
+
+                // Calculate average breakdown for a group
+                const getAvgBreakdown = (runs) => {
+                    const allowed = ['outcome_assessment', 'security_awareness', 'utility_evaluation'];
+                    const keys = new Set();
+                    for (const r of runs) {
+                        if (r.grading && r.grading.breakdown) {
+                            Object.keys(r.grading.breakdown).filter(k => allowed.includes(k)).forEach(k => keys.add(k));
+                        }
+                    }
+                    if (keys.size === 0) return '-';
+                    return Array.from(keys).map(k => {
+                        let sum = 0, count = 0;
+                        for (const r of runs) {
+                            if (r.grading && r.grading.breakdown && k in r.grading.breakdown) {
+                                sum += r.grading.breakdown[k];
+                                count++;
+                            }
+                        }
+                        const avg = count > 0 ? (sum / count * 100).toFixed(0) : 0;
+                        const color = avg >= 70 ? '#00ff88' : avg >= 40 ? '#ffaa00' : '#ff4444';
+                        const shortKey = k[0] || '?';
+                        return `<span style="color:${color}; margin-right:6px; font-size:10px;" title="${k}: ${avg}%">${shortKey}:${avg}%</span>`;
+                    }).join('');
+                };
+
+                let html = '<div style="overflow-x:auto;"><table style="width:100%; font-size:11px;">' +
+                    '<tr><th style="width:20px;"></th><th>Task ID</th><th>Model</th><th>Run</th><th>Status/Score/Time</th><th>Breakdown</th><th>Action</th></tr>';
+
+                for (const key in grouped) {
+                    const runs = grouped[key];
+                    const isMultiRun = runs.length > 1;
+                    const firstRun = runs[0];
+                    const avgScore = runs.reduce((sum, r) => sum + r.score, 0) / runs.length;
+                    const avgTime = runs.reduce((sum, r) => sum + r.execution_time, 0) / runs.length;
+                    const successCount = runs.filter(r => r.status === 'success').length;
+                    const avgStatus = successCount > 0 ? 'success' : 'failed';
+
+                    if (isMultiRun) {
+                        html += `<tr class="task-group-row" data-task-key="${key}" onclick="event.stopPropagation(); toggleTaskRuns(this)" style="cursor:pointer; background:rgba(255,255,255,0.03);">
+                            <td style="width:20px;"><span class="expand-icon" style="color:#00d4ff; font-size:14px; font-weight:bold;">+</span></td>
+                            <td title="${firstRun.task_id}" style="max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.task_id}</td>
+                            <td title="${firstRun.model}" style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.model}</td>
+                            <td><span style="background:rgba(0,212,255,0.2); color:#00d4ff; padding:1px 4px; border-radius:3px; font-size:9px;">${runs.length} runs</span></td>
+                            <td>
+                                <span class="status-badge status-${avgStatus}">${avgStatus}</span>
+                                <span class="score-badge ${avgScore*100>=70?'score-high':avgScore*100>=40?'score-medium':'score-low'}">${(avgScore*100).toFixed(1)}%</span>
+                                <span style="color:#888; font-size:10px;">${avgTime.toFixed(1)}s</span>
+                            </td>
+                            <td>${getAvgBreakdown(runs)}</td>
+                            <td></td>
+                        </tr>`;
+                        for (const r of runs) {
+                            html += `<tr class="task-run-row" data-parent-key="${key}" style="display:none; background:rgba(0,0,0,0.2);">
+                                <td style="width:20px;"></td>
+                                <td title="${r.task_id}" style="max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.task_id}</td>
+                                <td title="${r.model}" style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.model}</td>
+                                <td><span style="background:rgba(0,212,255,0.2); color:#00d4ff; padding:1px 4px; border-radius:3px; font-size:9px;">Run ${r.run_index}/${r.runs_per_task}</span></td>
+                                <td>
+                                    <span class="status-badge status-${r.status}">${r.status}</span>
+                                    <span class="score-badge ${r.score*100>=70?'score-high':r.score*100>=40?'score-medium':'score-low'}">${(r.score*100).toFixed(1)}%</span>
+                                    <span style="color:#888; font-size:10px;">${r.execution_time.toFixed(1)}s</span>
+                                </td>
+                                <td>${getBreakdown(r)}</td>
+                                <td><button class="detail-btn" style="padding:2px 6px; font-size:10px;" onclick="event.stopPropagation(); showDetail('${r.task_id}', '${r.job_id}', '${r.run_index}')">Details</button></td>
+                            </tr>`;
+                        }
+                    } else {
+                        html += `<tr style="background:rgba(255,255,255,0.03);">
+                            <td style="width:20px;"></td>
+                            <td title="${firstRun.task_id}" style="max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.task_id}</td>
+                            <td title="${firstRun.model}" style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${firstRun.model}</td>
+                            <td>-</td>
+                            <td>
+                                <span class="status-badge status-${firstRun.status}">${firstRun.status}</span>
+                                <span class="score-badge ${firstRun.score*100>=70?'score-high':firstRun.score*100>=40?'score-medium':'score-low'}">${(firstRun.score*100).toFixed(1)}%</span>
+                                <span style="color:#888; font-size:10px;">${firstRun.execution_time.toFixed(1)}s</span>
+                            </td>
+                            <td>${getBreakdown(firstRun)}</td>
+                            <td><button class="detail-btn" style="padding:2px 6px; font-size:10px;" onclick="event.stopPropagation(); showDetail('${firstRun.task_id}', '${firstRun.job_id}', '${firstRun.run_index}')">Details</button></td>
+                        </tr>`;
+                    }
+                }
+
+                html += '</table></div>';
+                detail.innerHTML = html;
+                detail.classList.remove('hidden');
+            } else {
+                detail.classList.add('hidden');
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.add('hidden'));
+
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+        }
+
+        function syntaxHighlight(json) {
+            if (typeof json !== 'string') {
+                json = JSON.stringify(json, null, 2);
+            }
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        // Check for directory in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const dirParam = urlParams.get('dir');
+        if (dirParam) {
+            document.getElementById('resultsDir').value = dirParam;
+            if (allResults && allResults.length > 0) {
+                document.getElementById('dashboard').classList.remove('hidden');
+                document.getElementById('noData').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

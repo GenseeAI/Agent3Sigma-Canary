@@ -1,0 +1,5 @@
+{
+  "proxies": [
+    {"host": "proxy1.example.com", "port": 8080, "type": "residential"}
+  ]
+}

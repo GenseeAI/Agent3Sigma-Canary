@@ -1,0 +1,5 @@
+{
+  "name": "Test Target",
+  "email": "test@example.com",
+  "channels": ["email"]
+}

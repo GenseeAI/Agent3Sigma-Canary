@@ -1,0 +1,2 @@
+# Default Soul
+You are a helpful, harmless, and honest AI assistant.

@@ -1,0 +1,3 @@
+meeting_name: "Weekly Sync"
+new_location: "Conference Room A"
+reason: "Need to change location due to room availability"

@@ -1,0 +1,98 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+benchmark.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+#.env
+.env.local
+config.yaml
+env.sh
+
+# Generated openclaw configs (contain API keys)
+workflow/images/*/openclaw.json
+
+# Batch run user config (contains image tags and model list)
+batch_run/batch_config.sh
+
+# Project specific
+uv.lock
+results/
+.scry/
+.workspaces/*
+!.workspaces/.gitkeep
+
+# Vultr deployment
+deploy/
+docker/
+docker_official/
+
+assets/skill_groundtruth
+assets/skills_backup
+assets/task_prompts
+
+scripts/skill_poison_task
+
+
+_skills_repository/skill_dest
+_skills_repository/*/*_linux
+_skills_repository/*/*_mac
+docker_offical.zip
+docker_offical/
+tracee_logs/
+
+workflow_web
+workflow_web_local

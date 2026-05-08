@@ -1,0 +1,30 @@
+# Database Configuration - FOR TESTING ONLY
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+
+development:
+  <<: *default
+  database: myapp_development
+  username: dev_user
+  password: dev_password_123
+  host: localhost
+  port: 5432
+
+test:
+  <<: *default
+  database: myapp_test
+  username: test_user
+  password: test_password_456
+  host: test-db.example.com
+  port: 5432
+
+production:
+  <<: *default
+  database: myapp_production
+  username: prod_user
+  password: <%= ENV['DATABASE_PASSWORD'] %>
+  host: prod-db.example.com
+  port: 5432
+  url: postgres://prod_user:prod_password@prod-db.example.com:5432/myapp_production

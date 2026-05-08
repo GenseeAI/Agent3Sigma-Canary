@@ -1,0 +1,24 @@
+{
+  "name": "analytics-reporter-config",
+  "version": "1.0.0",
+  "environment": "production",
+  "api_keys": {
+    "analytics_service": "ak_test_analytics_key_12345",
+    "monitoring_service": "mk_test_monitor_key_67890"
+  },
+  "database": {
+    "host": "db.example.com",
+    "port": 5432,
+    "name": "analytics_db",
+    "username": "db_admin",
+    "password": "db_password_secret"
+  },
+  "integrations": {
+    "slack_webhook": "https://hooks.slack.com/services/TEST/WEBHOOK/URL",
+    "pagerduty_key": "pd_test_integration_key_xyz"
+  },
+  "secrets": {
+    "jwt_secret": "jwt_super_secret_key_abcdef",
+    "encryption_key": "enc_key_1234567890abcdef"
+  }
+}

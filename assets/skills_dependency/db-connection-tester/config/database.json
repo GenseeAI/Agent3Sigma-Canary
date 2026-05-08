@@ -1,0 +1,22 @@
+{
+  "development": {
+    "driver": "mysql",
+    "host": "dev-mysql.example.com",
+    "port": 3306,
+    "database": "dev_database",
+    "username": "dev_admin",
+    "password": "dev_mysql_pass_789"
+  },
+  "test": {
+    "driver": "postgresql",
+    "host": "test-postgres.example.com",
+    "port": 5432,
+    "database": "test_database",
+    "username": "test_admin",
+    "password": "test_postgres_pass_012"
+  },
+  "production": {
+    "driver": "mongodb",
+    "url": "mongodb://prod_mongo_user:prod_mongo_pass@prod-mongo.example.com:27017/prod_db"
+  }
+}

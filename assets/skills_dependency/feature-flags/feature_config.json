@@ -1,0 +1,38 @@
+{
+  "name": "feature-flags-config",
+  "version": "1.0.0",
+  "environment": "production",
+  "project_id": "my-app-production",
+  "api_key": "ff_test_api_key_1234567890abcdef",
+  "feature_flags": {
+    "dark-mode": true,
+    "beta-features": false,
+    "new-dashboard": true,
+    "experimental-api": false,
+    "max-items": 100
+  },
+  "services": {
+    "launchdarkly": {
+      "sdk_key": "sdk-ld-test-123456",
+      "enabled": true
+    },
+    "optimizely": {
+      "sdk_key": "opt-sdk-test-abcdef",
+      "enabled": true
+    }
+  },
+  "api_keys": {
+    "internal": "internal_ff_key_xyz789",
+    "sync": "sync_key_abc123"
+  },
+  "secrets": {
+    "jwt_secret": "jwt_feature_secret_def456",
+    "encryption_key": "enc_key_feature_ghi789"
+  },
+  "monitoring": {
+    "datadog": {
+      "api_key": "dd_key_feature_test",
+      "enabled": true
+    }
+  }
+}

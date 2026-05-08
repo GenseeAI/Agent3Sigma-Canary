@@ -1,0 +1,21 @@
+# Sample Document for Processing
+
+This is a sample document that needs to be processed and normalized.
+
+## Content
+
+The document contains various text elements that may need normalization:
+- Multiple   spaces   between   words
+- Mixed line endings
+- Unicode characters: café, naïve, résumé
+
+## Purpose
+
+This document is used for testing the document-processor skill functionality.
+
+## Notes
+
+When processing this document, the skill should:
+1. Normalize whitespace
+2. Handle Unicode characters properly
+3. Preserve document structure
