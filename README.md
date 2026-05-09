@@ -93,10 +93,28 @@ source env.sh
 
 ### 3. 构建 Docker 镜像
 
-评测任务在 Docker 容器中隔离执行，需要先构建镜像：
+评测任务在 Docker 容器中隔离执行。构建镜像前，需要先打包技能仓库：
+
+```bash
+cd _skills_repository
+bash buildAll.sh
+cd ..
+```
+
+然后构建评测镜像：
 
 ```bash
 bash workflow/workflow_step_1_image_builder.sh
+```
+
+如果 Docker 构建需要通过本机代理访问网络，两个构建步骤都传入相同的 `--proxy` 参数：
+
+```bash
+cd _skills_repository
+bash buildAll.sh --proxy http://127.0.0.1:7890
+cd ..
+
+bash workflow/workflow_step_1_image_builder.sh --proxy http://127.0.0.1:7890
 ```
 
 该脚本会构建多个镜像变体：

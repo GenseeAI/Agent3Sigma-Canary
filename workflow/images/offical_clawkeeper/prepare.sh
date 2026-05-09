@@ -1,21 +1,21 @@
 #!/bin/bash
 #
 # ============================================================================
-# Offical ClawKeeper 镜像数据准备脚本
+# offical_clawkeeper image data preparation script
 # ============================================================================
 #
-# 【用途】
-# 在 official 基础镜像上下文上追加 ClawKeeper 安全插件。
-# 保留 official 的模型配置、定制化 skills、skill_data 和 mock-api server。
+# Purpose
+# Add the ClawKeeper security plugin on top of the official image context.
+# Preserve the official model configuration, custom skills, skill_data, and mock-api server.
 #
-# 【参数】
-#   $1 - 构建目录
-#   $2 - 保留参数 (此镜像不使用，保留兼容性)
-#   $3 - 项目目录
-#   $4 - skills 源码目录 (默认沿用 official/prepare.sh 的默认值)
+# Arguments
+#   $1 - Build directory
+#   $2 - Reserved argument (unused by this image; kept for compatibility)
+#   $3 - Project directory
+#   $4 - Skills source directory (defaults to official/prepare.sh behavior)
 #
-# 【可选环境变量】
-#   CLAWKEEPER_SOURCE_DIR - 使用预先 clone 好的本地 ClawKeeper 源码目录
+# Optional environment variables
+#   CLAWKEEPER_SOURCE_DIR - Local pre-cloned ClawKeeper source directory
 #
 # ============================================================================
 
@@ -29,30 +29,30 @@ CLAWKEEPER_SOURCE_DIR="${CLAWKEEPER_SOURCE_DIR:-${DEFAULT_CLAWKEEPER_SOURCE_DIR}
 CLAWKEEPER_PLUGIN_DIR="${CLAWKEEPER_SOURCE_DIR}/clawkeeper-plugin"
 
 if [[ -z "${BUILD_DIR}" ]]; then
-    echo "[ERROR] BUILD_DIR 未指定"
+    echo "[ERROR] BUILD_DIR is not specified"
     exit 1
 fi
 
-echo "[INFO] 准备 offical_clawkeeper 镜像数据..."
-echo "  构建目录: ${BUILD_DIR}"
-echo "  项目目录: ${PROJECT_DIR}"
-echo "  ClawKeeper源码目录: ${CLAWKEEPER_SOURCE_DIR}"
+echo "[INFO] Preparing offical_clawkeeper image data..."
+echo "  Build directory: ${BUILD_DIR}"
+echo "  Project directory: ${PROJECT_DIR}"
+echo "  ClawKeeper source directory: ${CLAWKEEPER_SOURCE_DIR}"
 
-# 先复用 official 的完整构建上下文，保留模型配置、skills 和 mock-api 数据。
+# Reuse the complete official build context, including model configuration, skills, and mock-api data.
 if [[ -n "${SKILLS_REPO_DIR}" ]]; then
     bash "${OFFICIAL_IMAGES_DIR}/prepare.sh" "${BUILD_DIR}" "" "${PROJECT_DIR}" "${SKILLS_REPO_DIR}" || exit 1
 else
     bash "${OFFICIAL_IMAGES_DIR}/prepare.sh" "${BUILD_DIR}" "" "${PROJECT_DIR}" || exit 1
 fi
 
-# 覆盖 Dockerfile 和 openclaw 配置，追加 ClawKeeper 插件加载。
+# Override the Dockerfile and OpenClaw configuration to load the ClawKeeper plugin.
 cp "${IMAGES_DIR}/Dockerfile" "${BUILD_DIR}/Dockerfile"
 cp "${IMAGES_DIR}/openclaw.json" "${BUILD_DIR}/docker/openclaw.json"
 
-# 使用预先 clone 好的 ClawKeeper 源码。构建过程中不访问 GitHub。
+# Use a pre-cloned ClawKeeper source directory. The build does not access GitHub.
 if [[ ! -f "${CLAWKEEPER_PLUGIN_DIR}/package.json" || ! -f "${CLAWKEEPER_PLUGIN_DIR}/openclaw.plugin.json" || ! -f "${CLAWKEEPER_PLUGIN_DIR}/install.sh" ]]; then
-    echo "[ERROR] ClawKeeper 源码目录不完整: ${CLAWKEEPER_SOURCE_DIR}"
-    echo "[提示] 请先 clone https://github.com/SafeAI-Lab-X/ClawKeeper 到该目录，或设置 CLAWKEEPER_SOURCE_DIR"
+    echo "[ERROR] ClawKeeper source directory is incomplete: ${CLAWKEEPER_SOURCE_DIR}"
+    echo "[HINT] Clone https://github.com/SafeAI-Lab-X/ClawKeeper into this directory, or set CLAWKEEPER_SOURCE_DIR"
     exit 1
 fi
 
@@ -63,4 +63,4 @@ if [[ -f "${CLAWKEEPER_SOURCE_DIR}/README.md" ]]; then
 fi
 rm -rf "${BUILD_DIR}/docker/ClawKeeper/.git"
 
-echo "[INFO] offical_clawkeeper 镜像数据准备完成"
+echo "[INFO] offical_clawkeeper image data preparation completed"

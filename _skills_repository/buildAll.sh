@@ -1,19 +1,137 @@
 #!/bin/bash
 
 # buildAll.sh - Package all skills and copy them to the target directory
-# Usage: ./buildAll.sh [target directory]
+# Usage: ./buildAll.sh [--platform linux|mac|all] [--proxy URL] [target directory]
+# Default platform: linux
 # If no target directory is specified, use ../_skills_repository/skill_dest by default
 
 set -e
+
+usage() {
+    echo "Usage: ./buildAll.sh [--platform linux|mac|all] [--proxy URL] [target directory]"
+    echo ""
+    echo "Options:"
+    echo "  --platform VALUE  Build skill binaries for linux, mac, or all. Default: linux"
+    echo "  --proxy URL       Use HTTP proxy for Docker builds"
+    echo "                    On macOS/Windows Docker Desktop, the URL is auto-rewritten to http://host.docker.internal:<port>"
+    echo "                    On Linux, --network host is added to Docker build commands"
+    echo "  -h, --help        Show this help message"
+}
 
 # Get the directory containing this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_REPO_DIR="${SCRIPT_DIR}"
 
+PLATFORM="linux"
+SKILL_DEST=""
+DOCKER_PROXY_ENABLED=false
+DOCKER_PROXY_URL=""
+DOCKER_EXTRA_BUILD_ARGS=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --platform)
+            if [[ -z "${2:-}" ]]; then
+                echo "Error: --platform requires a value"
+                usage
+                exit 1
+            fi
+            PLATFORM="$2"
+            shift 2
+            ;;
+        --platform=*)
+            PLATFORM="${1#*=}"
+            shift
+            ;;
+        --proxy)
+            if [[ -z "${2:-}" ]]; then
+                echo "Error: --proxy requires a URL"
+                usage
+                exit 1
+            fi
+            DOCKER_PROXY_ENABLED=true
+            DOCKER_PROXY_URL="$2"
+            shift 2
+            ;;
+        --proxy=*)
+            DOCKER_PROXY_ENABLED=true
+            DOCKER_PROXY_URL="${1#*=}"
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -*)
+            echo "Error: unknown option: $1"
+            usage
+            exit 1
+            ;;
+        *)
+            if [[ -n "${SKILL_DEST}" ]]; then
+                echo "Error: multiple target directories specified: ${SKILL_DEST} and $1"
+                usage
+                exit 1
+            fi
+            SKILL_DEST="$1"
+            shift
+            ;;
+    esac
+done
+
+PLATFORM="$(echo "${PLATFORM}" | tr '[:upper:]' '[:lower:]')"
+BUILD_MAC=false
+BUILD_LINUX=false
+
+case "${PLATFORM}" in
+    linux)
+        BUILD_LINUX=true
+        ;;
+    mac|macos|darwin)
+        PLATFORM="mac"
+        BUILD_MAC=true
+        ;;
+    all|both)
+        PLATFORM="all"
+        BUILD_MAC=true
+        BUILD_LINUX=true
+        ;;
+    *)
+        echo "Error: unsupported platform: ${PLATFORM}"
+        usage
+        exit 1
+        ;;
+esac
+
+if [[ "${DOCKER_PROXY_ENABLED}" == "true" ]]; then
+    if [[ -z "${DOCKER_PROXY_URL}" ]]; then
+        echo "Error: --proxy requires a URL"
+        usage
+        exit 1
+    fi
+
+    OS_TYPE="$(uname -s)"
+    if [[ "${OS_TYPE}" == "Darwin" || "${OS_TYPE}" == MINGW* || "${OS_TYPE}" == MSYS* || "${OS_TYPE}" == CYGWIN* ]]; then
+        # macOS and Windows Docker Desktop builds need to reach the host through host.docker.internal.
+        PROXY_PORT=$(echo "${DOCKER_PROXY_URL}" | grep -oE '[0-9]+$')
+        if [[ -z "${PROXY_PORT}" ]]; then
+            echo "Error: unable to extract proxy port from URL: ${DOCKER_PROXY_URL}"
+            exit 1
+        fi
+        DOCKER_PROXY_URL="http://host.docker.internal:${PROXY_PORT}"
+        DOCKER_EXTRA_BUILD_ARGS=""
+    else
+        # Linux Docker builds can reach localhost proxies through host networking.
+        DOCKER_EXTRA_BUILD_ARGS="--network host"
+    fi
+fi
+
+export DOCKER_PROXY_ENABLED
+export DOCKER_PROXY_URL
+export DOCKER_EXTRA_BUILD_ARGS
+
 # Target directory: prefer the argument, otherwise use the default
-if [[ -n "$1" ]]; then
-    SKILL_DEST="$1"
-else
+if [[ -z "${SKILL_DEST}" ]]; then
     SKILL_DEST="${SKILLS_REPO_DIR}/../_skills_repository/skill_dest"
 fi
 
@@ -28,6 +146,12 @@ echo "=========================================="
 echo "Packaging skills..."
 echo "Source directory: ${SKILLS_REPO_DIR}"
 echo "Target directory: ${SKILL_DEST}"
+echo "Platform: ${PLATFORM}"
+if [[ "${DOCKER_PROXY_ENABLED}" == "true" ]]; then
+    echo "Docker proxy: ${DOCKER_PROXY_URL}"
+else
+    echo "Docker proxy: disabled"
+fi
 echo "=========================================="
 
 # Create target directories
@@ -59,24 +183,26 @@ for skill_dir in "${SKILLS_REPO_DIR}"/*/; do
     echo "Processing skill: ${skill_name}"
     skill_count=$((skill_count + 1))
 
-    # Run build scripts for both Mac and Linux
+    # Run build scripts for the selected platform(s).
     build_mac="${skill_dir}build_mac.sh"
     build_linux="${skill_dir}build_linux.sh"
 
-    # Build Mac version
-    if [[ -f "${build_mac}" ]]; then
-        echo "  Running build script: $(basename "${build_mac}")"
-        (cd "${skill_dir}" && bash "$(basename "${build_mac}")")
-    else
-        echo "  Warning: build script not found: ${build_mac}"
+    if [[ "${BUILD_MAC}" == "true" ]]; then
+        if [[ -f "${build_mac}" ]]; then
+            echo "  Running build script: $(basename "${build_mac}")"
+            (cd "${skill_dir}" && bash "$(basename "${build_mac}")")
+        else
+            echo "  Warning: build script not found: ${build_mac}"
+        fi
     fi
 
-    # Build Linux version
-    if [[ -f "${build_linux}" ]]; then
-        echo "  Running build script: $(basename "${build_linux}")"
-        (cd "${skill_dir}" && bash "$(basename "${build_linux}")")
-    else
-        echo "  Warning: build script not found: ${build_linux}"
+    if [[ "${BUILD_LINUX}" == "true" ]]; then
+        if [[ -f "${build_linux}" ]]; then
+            echo "  Running build script: $(basename "${build_linux}")"
+            (cd "${skill_dir}" && bash "$(basename "${build_linux}")")
+        else
+            echo "  Warning: build script not found: ${build_linux}"
+        fi
     fi
 
     # Create target skill directory
@@ -122,6 +248,8 @@ for skill_dir in "${SKILLS_REPO_DIR}"/*/; do
             case "${item_name}" in
                 *.sh|*.py|*.rb|*.pl|*.lua) ;;
                 .*) ;;
+                *_mac) [[ "${BUILD_MAC}" == "true" ]] && keep=true ;;
+                *_linux) [[ "${BUILD_LINUX}" == "true" ]] && keep=true ;;
                 *) keep=true ;;
             esac
         fi
@@ -143,6 +271,7 @@ echo "=========================================="
 echo "Packaging complete!"
 echo "Processed ${skill_count} skills"
 echo "Target directory: ${SKILL_DEST}"
+echo "Platform: ${PLATFORM}"
 echo "  - skills/     : packaged skill directories"
 echo "  - skill_data/ : extracted data directories"
 echo "=========================================="

@@ -15,7 +15,7 @@
 #
 # Options:
 #   --proxy URL   Use HTTP proxy for Docker build (e.g. --proxy "http://127.0.0.1:7890")
-#                 On macOS, the URL is auto-rewritten to http://host.docker.internal:<port>
+#                 On macOS/Windows Docker Desktop, the URL is auto-rewritten to http://host.docker.internal:<port>
 #                 On Linux, --network host is added to the build command
 #
 # Prerequisites:
@@ -82,9 +82,13 @@ if [[ "${DOCKER_PROXY_ENABLED}" == "true" ]]; then
     fi
 
     OS_TYPE="$(uname -s)"
-    if [[ "${OS_TYPE}" == "Darwin" ]]; then
-        # macOS: rewrite host to host.docker.internal
+    if [[ "${OS_TYPE}" == "Darwin" || "${OS_TYPE}" == MINGW* || "${OS_TYPE}" == MSYS* || "${OS_TYPE}" == CYGWIN* ]]; then
+        # macOS and Windows Docker Desktop: rewrite host to host.docker.internal.
         PROXY_PORT=$(echo "${DOCKER_PROXY_URL}" | grep -oE '[0-9]+$')
+        if [[ -z "${PROXY_PORT}" ]]; then
+            echo "[ERROR] Unable to extract proxy port from URL: ${DOCKER_PROXY_URL}"
+            exit 1
+        fi
         DOCKER_PROXY_URL="http://host.docker.internal:${PROXY_PORT}"
         DOCKER_EXTRA_BUILD_ARGS=""
     else

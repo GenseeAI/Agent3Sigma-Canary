@@ -1,18 +1,18 @@
 #!/bin/bash
 #
 # ============================================================================
-# Official 镜像数据准备脚本
+# Official image data preparation script
 # ============================================================================
 #
-# 【用途】
-# 准备 official 镜像构建所需的数据文件
-# 包含原生 OpenClaw + 定制化 skills + mock-api server 所需数据
+# Purpose
+# Prepare data files required to build the official image.
+# Includes native OpenClaw, custom skills, and mock-api server data.
 #
-# 【参数】
-#   $1 - 构建目录
-#   $2 - 保留参数 (此镜像不使用，保留兼容性)
-#   $3 - 项目目录
-#   $4 - skills 源码目录 (默认: ../../../_skills_repository)
+# Arguments
+#   $1 - Build directory
+#   $2 - Reserved argument (unused by this image; kept for compatibility)
+#   $3 - Project directory
+#   $4 - Skills source directory (default: ../../../_skills_repository)
 #
 # ============================================================================
 
@@ -23,63 +23,63 @@ SKILL_DEST_DIR="${SKILLS_REPO_DIR}/../_skills_repository/skill_dest"
 IMAGES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ -z "${BUILD_DIR}" ]]; then
-    echo "[ERROR] BUILD_DIR 未指定"
+    echo "[ERROR] BUILD_DIR is not specified"
     exit 1
 fi
 
-echo "[INFO] 准备 official 镜像数据..."
-echo "  构建目录: ${BUILD_DIR}"
-echo "  项目目录: ${PROJECT_DIR}"
-echo "  Skills源码目录: ${SKILLS_REPO_DIR}"
-echo "  Skills打包目录: ${SKILL_DEST_DIR}"
+echo "[INFO] Preparing official image data..."
+echo "  Build directory: ${BUILD_DIR}"
+echo "  Project directory: ${PROJECT_DIR}"
+echo "  Skills source directory: ${SKILLS_REPO_DIR}"
+echo "  Packaged skills directory: ${SKILL_DEST_DIR}"
 
-# 创建目录结构
+# Create the directory layout.
 mkdir -p "${BUILD_DIR}/docker/skills"
 mkdir -p "${BUILD_DIR}/docker/skill_data"
 mkdir -p "${BUILD_DIR}/docker/mock-api"
 mkdir -p "${BUILD_DIR}/docker/mock_api_data"
 
-# 从 skill_dest 复制 skills
+# Copy skills from skill_dest.
 if [[ -d "${SKILL_DEST_DIR}/skills" ]]; then
-    echo "  从 skill_dest 复制 skills..."
+    echo "  Copying skills from skill_dest..."
     cp -r "${SKILL_DEST_DIR}/skills/"* "${BUILD_DIR}/docker/skills/"
 else
-    echo "[ERROR] skill_dest/skills 目录不存在: ${SKILL_DEST_DIR}/skills"
-    echo "[提示] 请先运行: cd ${SKILLS_REPO_DIR} && bash buildAll.sh"
+    echo "[ERROR] skill_dest/skills directory does not exist: ${SKILL_DEST_DIR}/skills"
+    echo "[HINT] Run first: cd ${SKILLS_REPO_DIR} && bash buildAll.sh"
     exit 1
 fi
 
-# 复制 openclaw 配置文件
+# Copy the OpenClaw configuration file.
 cp "${IMAGES_DIR}/openclaw.json" "${BUILD_DIR}/docker/openclaw.json"
 
-# 复制 mock-api 目录
+# Copy the mock-api directory.
 if [[ -d "${IMAGES_DIR}/mock-api" ]]; then
-    echo "  复制 mock-api 目录..."
+    echo "  Copying mock-api directory..."
     cp -r "${IMAGES_DIR}/mock-api/"* "${BUILD_DIR}/docker/mock-api/"
 else
-    echo "[ERROR] mock-api 目录不存在: ${IMAGES_DIR}/mock-api"
+    echo "[ERROR] mock-api directory does not exist: ${IMAGES_DIR}/mock-api"
     exit 1
 fi
 
-# 复制 Dockerfile
+# Copy the Dockerfile.
 cp "${IMAGES_DIR}/Dockerfile" "${BUILD_DIR}/Dockerfile"
 
-# 复制 assets/skill_data 到构建目录
+# Copy assets/skill_data into the build directory.
 ASSETS_SKILL_DATA="${PROJECT_DIR}/assets/skill_data"
 if [[ -d "${ASSETS_SKILL_DATA}" ]]; then
-    echo "  复制 assets/skill_data..."
+    echo "  Copying assets/skill_data..."
     cp -r "${ASSETS_SKILL_DATA}/"* "${BUILD_DIR}/docker/skill_data/"
 else
-    echo "[WARN] assets/skill_data 目录不存在: ${ASSETS_SKILL_DATA}"
+    echo "[WARN] assets/skill_data directory does not exist: ${ASSETS_SKILL_DATA}"
 fi
 
-# 复制 assets/mock_api/data 到构建目录
+# Copy assets/mock_api/data into the build directory.
 ASSETS_MOCK_API_DATA="${PROJECT_DIR}/assets/mock_api/data"
 if [[ -d "${ASSETS_MOCK_API_DATA}" ]]; then
-    echo "  复制 assets/mock_api/data..."
+    echo "  Copying assets/mock_api/data..."
     cp -r "${ASSETS_MOCK_API_DATA}/"* "${BUILD_DIR}/docker/mock_api_data/"
 else
-    echo "[WARN] assets/mock_api/data 目录不存在: ${ASSETS_MOCK_API_DATA}"
+    echo "[WARN] assets/mock_api/data directory does not exist: ${ASSETS_MOCK_API_DATA}"
 fi
 
-echo "[INFO] official 镜像数据准备完成"
+echo "[INFO] official image data preparation completed"
