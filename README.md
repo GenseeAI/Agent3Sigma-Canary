@@ -39,12 +39,15 @@ cp config.example.yaml config.yaml
 
 # 2. 编辑配置文件，填入你的 API Keys 和模型信息
 vim config.yaml
+
+# 3. 可选：验证 config.yaml 中配置的模型 API 是否可用
+uv run python scripts/validate_api.py
 ```
 
 在 `config.yaml` 中，你需要配置：
 
 - **providers**：定义 API 端点、密钥和可用模型列表。你可以配置多个 provider，每个 provider 下可以有多个模型。Provider ID + Model ID 组合即为评测时的 `--model` 参数值
-- **roles**：指定辅助模型的角色分配（pair / judge / ipi 各用哪个 provider 的哪个模型）
+- **roles**：指定辅助模型的角色分配（pair / judge / ipi）。当前辅助模型请求使用 OpenAI-compatible Chat Completions API
 
 配置示例：
 
@@ -72,9 +75,9 @@ roles:
   #   api_key: "sk-xxx"
   #   model: "gpt-4o"
   judge:
-    base_url: "https://api.anthropic.com/v1"
-    api_key: "sk-ant-xxx"
-    model: "claude-sonnet-4"
+    base_url: "https://api.openai.com/v1"
+    api_key: "sk-xxx"
+    model: "gpt-4o"
   # ipi:
   #   base_url: "https://api.openai.com/v1"
   #   api_key: "sk-xxx"

@@ -8,6 +8,9 @@
 # Then run setup to generate env.sh and openclaw.json:
 #   bash setup.sh
 #
+# Optional: validate configured model APIs:
+#   uv run python scripts/validate_api.py
+#
 # =============================================================================
 
 # -----------------------------------------------------------------------------
