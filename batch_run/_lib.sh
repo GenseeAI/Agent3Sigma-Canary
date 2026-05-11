@@ -102,3 +102,11 @@ init_parallel() {
     FAIL=0
     TOTAL=0
 }
+
+parallel_limit_label() {
+    if [ "$MAX_PARALLEL" -gt 0 ]; then
+        echo "$MAX_PARALLEL"
+    else
+        echo "unlimited"
+    fi
+}

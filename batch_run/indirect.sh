@@ -43,7 +43,7 @@ echo "Images (${#DOCKER_IMAGES[@]}): ${DOCKER_IMAGE_NAMES[*]}"
 echo "Models (${#MODELS[@]}): ${MODEL_NAMES[*]}"
 echo "Attacks: ${ATTACK_NAMES[*]}"
 echo "Context modes: ${NO_CONTEXT_NAMES[*]}"
-echo "Max parallel: ${MAX_PARALLEL:-unlimited}"
+echo "Max parallel: $(parallel_limit_label)"
 echo ""
 
 for d in "${!DOCKER_IMAGES[@]}"; do
@@ -60,7 +60,7 @@ for d in "${!DOCKER_IMAGES[@]}"; do
                     wait_one
                 fi
                 TAG="${DOCKER_TAG}_${RUN_TAG}_${MODEL_NAMES[$i]}_${ATTACK_NAMES[$j]}_${NO_CONTEXT_NAMES[$c]}"
-                LOG_FILE="$LOG_DIR/${TAG}.log"
+                LOG_FILE="$LOG_DIR/${DOCKER_TAG}_indirect_${RUN_TAG}_${MODEL_NAMES[$i]}_${ATTACK_NAMES[$j]}_${NO_CONTEXT_NAMES[$c]}.log"
                 launch_task "$TAG" "$LOG_FILE" "$DOCKER_IMG" "./scripts/run.sh ${MODELS[$i]} $COMMON_ARGS --output-dir $OUTPUT_DIR --attack '${ATTACKS[$j]}' ${NO_CONTEXT_FLAGS[$c]}"
             done
         done

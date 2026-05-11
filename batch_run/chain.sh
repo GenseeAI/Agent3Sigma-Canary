@@ -35,7 +35,7 @@ mkdir -p "$LOG_DIR"
 echo "========== chain test [${RUN_TAG}] (parallel) =========="
 echo "Images (${#DOCKER_IMAGES[@]}): ${DOCKER_IMAGE_NAMES[*]}"
 echo "Models (${#MODELS[@]}): ${MODEL_NAMES[*]}"
-echo "Max parallel: ${MAX_PARALLEL:-unlimited}"
+echo "Max parallel: $(parallel_limit_label)"
 echo ""
 
 for d in "${!DOCKER_IMAGES[@]}"; do
@@ -50,7 +50,7 @@ for d in "${!DOCKER_IMAGES[@]}"; do
             wait_one
         fi
         TAG="${DOCKER_TAG}_${RUN_TAG}_${MODEL_NAMES[$i]}"
-        LOG_FILE="$LOG_DIR/${TAG}.log"
+        LOG_FILE="$LOG_DIR/${DOCKER_TAG}_chain_${RUN_TAG}_${MODEL_NAMES[$i]}.log"
         launch_task "$TAG" "$LOG_FILE" "$DOCKER_IMG" "./scripts/run.sh ${MODELS[$i]} $COMMON_ARGS --output-dir $OUTPUT_DIR"
     done
 done

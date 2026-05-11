@@ -62,7 +62,7 @@ echo "========== direct test [${RUN_TAG}] (parallel) =========="
 echo "Images (${#DOCKER_IMAGES[@]}): ${DOCKER_IMAGE_NAMES[*]}"
 echo "Models (${#MODELS[@]}): ${MODEL_NAMES[*]}"
 echo "Attacks (${#ATTACKS[@]}): ${ATTACK_NAMES[*]}"
-echo "Max parallel: ${MAX_PARALLEL:-unlimited}"
+echo "Max parallel: $(parallel_limit_label)"
 echo ""
 
 for d in "${!DOCKER_IMAGES[@]}"; do
@@ -78,7 +78,7 @@ for d in "${!DOCKER_IMAGES[@]}"; do
                 wait_one
             fi
             TAG="${DOCKER_TAG}_${RUN_TAG}_${MODEL_NAMES[$i]}_${ATTACK_NAMES[$j]}"
-            LOG_FILE="$LOG_DIR/${TAG}.log"
+            LOG_FILE="$LOG_DIR/${DOCKER_TAG}_direct_${RUN_TAG}_${MODEL_NAMES[$i]}_${ATTACK_NAMES[$j]}.log"
             ATTACK_FLAG=""
             [ -n "${ATTACKS[$j]}" ] && ATTACK_FLAG="--attack ${ATTACKS[$j]}"
             launch_task "$TAG" "$LOG_FILE" "$DOCKER_IMG" "./scripts/run.sh ${MODELS[$i]} $COMMON_ARGS --output-dir $OUTPUT_DIR $ATTACK_FLAG"
