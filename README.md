@@ -93,7 +93,9 @@ source env.sh
 
 ### 3. 构建 Docker 镜像
 
-评测任务在 Docker 容器中隔离执行。构建镜像前，需要先打包技能仓库：
+评测任务在 Docker 容器中隔离执行，需要首先构建评测环境。
+
+构建镜像前，需要先打包技能仓库：
 
 ```bash
 cd _skills_repository
@@ -101,25 +103,30 @@ bash buildAll.sh
 cd ..
 ```
 
-然后构建评测镜像：
+然后构建评测镜像。AgentScry 支持评测原生 OpenClaw 以及集成不同安全插件后的 OpenClaw。每个 Docker 镜像对应一个独立的评测环境，构建时可以按需选择要评测的镜像变体。
+
+- **official**：原生 OpenClaw Agent
+- **offical_shield**：OpenClaw + Shield 安全插件
+- **offical_secureclaw**：OpenClaw + SecureClaw 安全插件
+- **offical_clawkeeper**：OpenClaw + ClawKeeper 安全插件
+
+运行构建脚本后，根据提示选择需要的镜像即可。例如只评测原生 OpenClaw 时选择 `official`；需要比较安全插件效果时，同时选择对应的插件镜像。
 
 ```bash
 bash workflow/workflow_step_1_image_builder.sh
 ```
 
-如果你因为网络问题，需要使用 HTTP 代理来构建 Docker，请参考 [docs/docker_proxy.md](docs/docker_proxy.md) 文档。
-
-该脚本会构建多个镜像变体：
-- **official**：原生 OpenClaw Agent
-- **offical_shield**：OpenClaw + Shield 安全插件
-- **offical_secureclaw**：OpenClaw + SecureClaw 安全插件
-- **offical_clawkeeper**：OpenClaw + ClawKeeper 安全插件
+> **提示**
+> 如果你因为网络问题需要使用 HTTP 代理来构建 Docker，请参考 [docs/docker_proxy.md](docs/docker_proxy.md) 文档。
 
 ### 4. 运行评测
 
 **基本用法：**
 
 ```bash
+# 选择要评测的目标镜像，替换为第 3 步构建输出的实际 image tag
+export DOCKER_IMAGE=openclaw-official-v20260430_120000
+
 # 评测单个模型
 ./scripts/run.sh --model <provider-id>/<model-id> --suite <suite> --docker
 
@@ -137,6 +144,8 @@ bash workflow/workflow_step_1_image_builder.sh
 | `--attack` | 攻击方法 | `code_attack`, `pair`, `important_message`, `InjecAgent` 等 |
 | `--runs` | 每个 task 的重复次数 | `--runs 3` |
 | `--output-dir` | 结果输出目录 | `--output-dir results/my_test` |
+
+使用 `--docker` 时，`DOCKER_IMAGE` 决定实际启动的评测镜像，也就是本次评测使用的 OpenClaw 环境。批量评测脚本会根据 `batch_run/batch_config.sh` 中的 `DOCKER_IMAGES` 自动为每个任务设置该变量；单次运行时需要手动 `export DOCKER_IMAGE=...`。
 
 **批量评测：**
 
