@@ -107,15 +107,7 @@ cd ..
 bash workflow/workflow_step_1_image_builder.sh
 ```
 
-如果 Docker 构建需要通过本机代理访问网络，两个构建步骤都传入相同的 `--proxy` 参数：
-
-```bash
-cd _skills_repository
-bash buildAll.sh --proxy http://127.0.0.1:7890
-cd ..
-
-bash workflow/workflow_step_1_image_builder.sh --proxy http://127.0.0.1:7890
-```
+如果你因为网络问题，需要使用 HTTP 代理来构建 Docker，请参考 [docs/docker_proxy.md](docs/docker_proxy.md) 文档。
 
 该脚本会构建多个镜像变体：
 - **official**：原生 OpenClaw Agent
