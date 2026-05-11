@@ -144,11 +144,10 @@ export DOCKER_IMAGE=openclaw-official-v20260430_120000
 | `--model` | 被测模型（provider-id/model-id） | `--model anthropic/claude-sonnet-4` |
 | `--suite` | 测试套件 | `direct`, `indirect`, `memory`, `chain`, `skills_poison_EN`, `all`, 或逗号分隔的 task ID |
 | `--docker` | 在 Docker 容器中运行 | `--docker` |
+| `--verbose` | 输出更详细的运行日志 | `--verbose` |
 | `--attack` | 攻击方法 | `code_attack`, `pair`, `important_message`, `InjecAgent` 等 |
 | `--runs` | 每个 task 的重复次数 | `--runs 3` |
 | `--output-dir` | 结果输出目录 | `--output-dir results/my_test` |
-
-使用 `--docker` 时，`DOCKER_IMAGE` 决定实际启动的评测镜像，也就是本次评测使用的 OpenClaw 环境。批量评测脚本会根据 `batch_run/batch_config.sh` 中的 `DOCKER_IMAGES` 自动为每个任务设置该变量；单次运行时需要手动 `export DOCKER_IMAGE=...`。
 
 **批量评测：**
 
