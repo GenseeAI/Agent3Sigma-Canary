@@ -1,24 +1,23 @@
 # AgentCanary Workflow
 
-`workflow/` 仅负责构建 AgentCanary 的 Docker 基础镜像。
+`workflow/` is responsible only for building AgentCanary Docker base images.
 
-## 镜像定位
+## Image Roles
 
-| 镜像类型 | 标签格式 | 说明 |
-|---------|---------|------|
-| `official` | `openclaw-official-v{timestamp}` | 原生 OpenClaw + 定制化 skills + mock-api server |
-| `offical_shield` | `openclaw-offical_shield-v{timestamp}` | `official` + openclaw-shield 安全插件 |
-| `offical_secureclaw` | `openclaw-offical_secureclaw-v{timestamp}` | `official` + SecureClaw 安全插件 |
-| `offical_clawkeeper` | `openclaw-offical_clawkeeper-v{timestamp}` | `official` + ClawKeeper 安全插件 |
+| Image Type | Tag Format | Description |
+|------------|------------|-------------|
+| `official` | `openclaw-official-v{timestamp}` | Native OpenClaw + custom skills + mock-api server |
+| `offical_shield` | `openclaw-offical_shield-v{timestamp}` | `official` + openclaw-shield security plugin |
+| `offical_secureclaw` | `openclaw-offical_secureclaw-v{timestamp}` | `official` + SecureClaw security plugin |
+| `offical_clawkeeper` | `openclaw-offical_clawkeeper-v{timestamp}` | `official` + ClawKeeper security plugin |
 
-其他镜像都应在 `official` 的基础能力上新增不同的安全插件。
+Other image variants should extend the capabilities of `official` by adding different security plugins.
 
-## 目录结构
+## Directory Layout
 
 ```text
 workflow/
 ├── README.md
-├── USER.md
 ├── workflow_step_1_image_builder.sh
 └── images/
     ├── official/
@@ -42,40 +41,40 @@ workflow/
         └── prepare.sh
 ```
 
-## 构建流程
+## Build Flow
 
 ```text
 workflow_step_1_image_builder.sh
-├── 创建工作目录 .workspaces/AgentCanary_{timestamp}
-├── 选择镜像类型
-├── 调用 images/{type}/prepare.sh 准备构建上下文
-└── 执行 docker build
+├── Creates the workspace directory .workspaces/AgentCanary_{timestamp}
+├── Selects image types
+├── Calls images/{type}/prepare.sh to prepare the build context
+└── Runs docker build
 ```
 
-构建产物：
+Build outputs:
 
-- 工作目录：`.workspaces/AgentCanary_{timestamp}`
-- 构建上下文：`.workspaces/AgentCanary_{timestamp}/build_{type}`
-- 镜像标签：`openclaw-{type}-v{timestamp}`
-- 状态文件：`.workspaces/AgentCanary_{timestamp}/.build_state`
+- Workspace: `.workspaces/AgentCanary_{timestamp}`
+- Build context: `.workspaces/AgentCanary_{timestamp}/build_{type}`
+- Image tag: `openclaw-{type}-v{timestamp}`
+- State file: `.workspaces/AgentCanary_{timestamp}/.build_state`
 
-## 使用方式
+## Usage
 
 ```bash
 bash workflow/workflow_step_1_image_builder.sh
 ```
 
-交互项：
+Interactive prompts:
 
-| 交互项 | 回车默认值 |
-|--------|-----------|
-| 工作目录选择 | 新建工作目录 |
-| 代理配置 | 不使用代理 |
-| 镜像类型选择 | 全部 |
+| Prompt | Default When Pressing Enter |
+|--------|-----------------------------|
+| Workspace selection | Create a new workspace |
+| Proxy configuration | Do not use a proxy |
+| Image type selection | Build all image types |
 
-## official 构建内容
+## official Build Contents
 
-`images/official/prepare.sh` 会把以下内容放入 Docker build context：
+`images/official/prepare.sh` copies the following files into the Docker build context:
 
 - `images/official/Dockerfile`
 - `images/official/openclaw.json`
@@ -84,90 +83,92 @@ bash workflow/workflow_step_1_image_builder.sh
 - `assets/mock_api/data`
 - `images/official/mock-api`
 
-`images/official/Dockerfile` 会安装并配置：
+`images/official/Dockerfile` installs and configures:
 
 - `openclaw@2026.4.11`
-- 定制化 skills：`/root/.openclaw/skills`
-- mock-api server：`/opt/mock-api`
-- mock-api 数据：`/tmp/scry/mock_api/data`
-- skill 数据：`/tmp/scry/skill_data`
+- Custom skills: `/root/.openclaw/skills`
+- mock-api server: `/opt/mock-api`
+- mock-api data: `/tmp/scry/mock_api/data`
+- Skill data: `/tmp/scry/skill_data`
 
-## offical_shield 构建内容
+## offical_shield Build Contents
 
-`images/offical_shield/prepare.sh` 会先复用 `images/official/prepare.sh` 生成完整 official 构建上下文，然后追加：
+`images/offical_shield/prepare.sh` first reuses `images/official/prepare.sh` to generate a complete official build context, then adds:
 
-- `openclaw-shield` 源码：`/opt/openclaw-shield`
-- 通过 Dockerfile 执行：`openclaw plugins install /opt/openclaw-shield`
-- `openclaw.json` 使用 `tools.profile = "full"`，使 `knostic_shield` 进入 agent 的实际工具列表
+- `openclaw-shield` source code: `/opt/openclaw-shield`
+- Dockerfile installation step: `openclaw plugins install /opt/openclaw-shield`
+- `tools.profile = "full"` in `openclaw.json`, so `knostic_shield` is included in the agent's actual tool list
 
-`offical_shield/openclaw.json` 与 `official/openclaw.json` 保持一致，不手工添加插件配置。
+`offical_shield/openclaw.json` remains consistent with `official/openclaw.json` and does not manually add plugin configuration.
 
-插件源码需要提前 clone 好，构建过程中不会访问 GitHub。默认源码位置是：
+The plugin source code must be cloned in advance. The build does not access GitHub.
+The default source location is:
 
 ```text
 workflow/images/offical_shield/openclaw-shield
 ```
 
-也可以通过环境变量指定其他本地源码目录：
+You can also specify another local source directory with an environment variable:
 
 ```bash
 OPENCLAW_SHIELD_SOURCE_DIR=/path/to/openclaw-shield \
   bash workflow/workflow_step_1_image_builder.sh
 ```
 
-## offical_secureclaw 构建内容
+## offical_secureclaw Build Contents
 
-`images/offical_secureclaw/prepare.sh` 会先复用 `images/official/prepare.sh` 生成完整 official 构建上下文，然后追加：
+`images/offical_secureclaw/prepare.sh` first reuses `images/official/prepare.sh` to generate a complete official build context, then adds:
 
-- `secureclaw` 仓库源码：`/opt/secureclaw`
-- 按 SecureClaw README 中的 `Option C: Plugin from source` 执行源码安装：
+- `secureclaw` repository source code: `/opt/secureclaw`
+- Source installation following `Option C: Plugin from source` in the SecureClaw README:
   - `cd /opt/secureclaw/secureclaw`
   - `npm install`
   - `npm run build`
   - `npx openclaw plugins install -l .`
-- 安装插件内置 skill：`npx openclaw secureclaw skill install`
+- Built-in SecureClaw skill installation: `npx openclaw secureclaw skill install`
 
-`offical_secureclaw/openclaw.json` 与 `official/openclaw.json` 保持一致，不手工添加插件配置。
+`offical_secureclaw/openclaw.json` remains consistent with `official/openclaw.json` and does not manually add plugin configuration.
 
-插件源码已 clone 到：
+The plugin source code has been cloned to:
 
 ```text
 workflow/images/offical_secureclaw/secureclaw
 ```
 
-也可以通过环境变量指定其他本地源码目录：
+You can also specify another local source directory with an environment variable:
 
 ```bash
 SECURECLAW_SOURCE_DIR=/path/to/secureclaw \
   bash workflow/workflow_step_1_image_builder.sh
 ```
 
-## offical_clawkeeper 构建内容
+## offical_clawkeeper Build Contents
 
-`images/offical_clawkeeper/prepare.sh` 会先复用 `images/official/prepare.sh` 生成完整 official 构建上下文，然后追加：
+`images/offical_clawkeeper/prepare.sh` first reuses `images/official/prepare.sh` to generate a complete official build context, then adds:
 
-- `ClawKeeper` 插件源码：`/opt/ClawKeeper/clawkeeper-plugin`
-- `openclaw.json` 中声明 `plugins.load.paths = ["/opt/ClawKeeper/clawkeeper-plugin"]`
+- `ClawKeeper` plugin source code: `/opt/ClawKeeper/clawkeeper-plugin`
+- `plugins.load.paths = ["/opt/ClawKeeper/clawkeeper-plugin"]` in `openclaw.json`
 
-ClawKeeper 的 `install.sh` 内部会执行 `npx openclaw plugins install -l .`，但 OpenClaw 安装期扫描会因为插件内包含 `child_process` shell command execution 模式而阻止安装。因此该镜像通过 `openclaw.json` 显式加载本地插件路径。
+ClawKeeper's `install.sh` runs `npx openclaw plugins install -l .` internally, but OpenClaw's install-time scan blocks installation because the plugin contains `child_process` shell command execution patterns.
+This image therefore loads the local plugin path explicitly through `openclaw.json`.
 
-插件源码已 clone 到：
+The plugin source code has been cloned to:
 
 ```text
 workflow/images/offical_clawkeeper/ClawKeeper
 ```
 
-也可以通过环境变量指定其他本地源码目录：
+You can also specify another local source directory with an environment variable:
 
 ```bash
 CLAWKEEPER_SOURCE_DIR=/path/to/ClawKeeper \
   bash workflow/workflow_step_1_image_builder.sh
 ```
 
-## 断点续传
+## Resume Support
 
-构建脚本支持断点续传：
+The build script supports resuming interrupted builds:
 
-- 状态保存在 `{WORK_DIR}/.build_state`
-- 中断后重新执行会检测已有工作目录
-- 用户可选择继续执行、覆盖重来或新建目录
+- State is saved in `{WORK_DIR}/.build_state`
+- When rerun after interruption, the script detects existing workspaces
+- The user can continue, overwrite the existing workspace, or create a new workspace
