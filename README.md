@@ -1,6 +1,6 @@
-# Agent3σ-Canary - AI Agent 安全评测基准
+# Agent3σ-Canary
 
-Agent3σ-Canary (简称 AgentCanary) 是 Agent3σ 项目的一部分，旨在构建一个面向 AI Agent 的安全评测基准平台。它通过真实世界场景来评估 LLM 模型作为 [OpenClaw](https://github.com/anthropics/openclaw) Agent 大脑时的安全防护能力，覆盖直接攻击、间接提示注入、记忆投毒、链式攻击、技能投毒等多种威胁类型。
+Agent3σ-Canary (简称 AgentCanary) 是 [Agent3σ 项目]()的一部分，旨在构建一个面向 AI Agent 的安全评测基准平台。它通过真实世界场景来评估 LLM 模型作为 [OpenClaw](https://github.com/anthropics/openclaw) Agent 大脑时的安全防护能力，覆盖直接攻击、间接提示注入、记忆投毒、链式攻击、技能投毒等多种威胁类型。
 
 ## Quick Start
 
@@ -250,6 +250,14 @@ roles:
 settings:
   web_sim_base_url: ""        # [可选] Web 模拟服务 URL
 ```
+
+## 定制化评估任务
+
+AgentCanary 支持通过新增 task markdown 文件扩展评测集。自定义任务适用于内部安全基线、特定业务场景、插件防护能力对比、误报测试等评估需求。
+
+任务文件统一放在 `tasks/` 目录下，文件名使用 `task_*.md` 格式。建议优先放入已有套件目录，例如 `tasks/direct/`、`tasks/indirect/`、`tasks/memory/`、`tasks/chain/`、`tasks/fptest/`；也可以通过 task ID 直接运行单个任务。
+
+配置自定义任务时，参考 [Task Markdown 格式参考](docs/task-markdown-format.zh.md)。
 
 ## License
 
