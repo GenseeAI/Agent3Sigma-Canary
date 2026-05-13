@@ -33,6 +33,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 import lib_docker as docker
+import lib_tracee as tracee
+import tracee_correlate
 from lib_agent import (
     cleanup_agent_sessions,
     ensure_agent_exists,
@@ -239,6 +241,17 @@ def _parse_args() -> argparse.Namespace:
         "--docker",
         action="store_true",
         help="Run OpenClaw agent inside a Docker container for isolation",
+    )
+    parser.add_argument(
+        "--tracee",
+        action="store_true",
+        help="Enable tracee monitoring for the test container (requires --docker)",
+    )
+    parser.add_argument(
+        "--tracee-config",
+        type=str,
+        default=None,
+        help="Path to tracee_config.yaml (default: ./tracee_config.yaml)",
     )
     return parser.parse_args()
 
@@ -636,6 +649,11 @@ def main():
         logger.error("Missing required argument: --model")
         sys.exit(2)
 
+    # Validate tracee arguments
+    if args.tracee and not args.docker:
+        logger.warning("⚠️ --tracee requires --docker mode. Ignoring --tracee.")
+        args.tracee = False
+
     logger.info("🔧 Initializing BenchmarkRunner...")
     runner = BenchmarkRunner(tasks_dir)
 
@@ -735,6 +753,15 @@ def main():
                     docker.start()
                     ensure_agent_exists(agent_id, args.model, task_agent_workspace_root_relate)
 
+                    # Start tracee monitoring if requested
+                    if args.tracee:
+                        target_container_id = docker.get_container_id()
+                        if target_container_id:
+                            config_path = Path(args.tracee_config) if args.tracee_config else None
+                            tracee.start(target_container_id, config_path=config_path)
+                            if tracee.is_active():
+                                logger.info("🔍 Tracee monitoring started for container: %s", target_container_id[:12])
+
                 try:
                     result = execute_openclaw_task(
                         task=task,
@@ -771,6 +798,15 @@ def main():
                     }
 
                 if docker.is_active():
+                    # Stop tracee monitoring and collect logs before stopping container
+                    if tracee.is_active():
+                        tracee.stop()
+                        from datetime import datetime
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        tracee_log = tracee.rename_log_for_task(task.task_id, timestamp)
+                        if tracee_log:
+                            logger.info("📊 Tracee log saved: %s", tracee_log)
+
                     # Stop container before grading — judge runs on host, not in Docker
                     # (transcript already copied inside execute_openclaw_task)
                     docker.stop()
@@ -797,6 +833,21 @@ def main():
                         breakdown={},
                         notes=note,
                     )
+
+                # Perform tracee log correlation analysis if available
+                if tracee_log and result.get("transcript_path"):
+                    try:
+                        correlation_report = tracee_correlate.correlate_task_logs(
+                            task_id=task.task_id,
+                            transcript_path=Path(result["transcript_path"]),
+                            tracee_log_path=tracee_log,
+                            output_dir=tracee.get_output_dir(),
+                        )
+                        if correlation_report:
+                            logger.info("🔗 Tracee correlation report: %s", correlation_report)
+                    except Exception as corr_exc:
+                        logger.warning("Tracee correlation failed for %s: %s", task.task_id, corr_exc)
+
             finally:
                 if docker.is_active():
                     docker.stop()
