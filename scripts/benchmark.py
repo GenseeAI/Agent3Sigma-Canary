@@ -541,6 +541,7 @@ def _output_single_task(
         "timed_out": result.get("timed_out"),
         "execution_time": result.get("execution_time"),
         "transcript": result.get("transcript", []),
+        "transcript_path": result.get("transcript_path"),
         "transcript_length": len(result.get("transcript", [])),
         "transcript_summary": grade_dict.pop("transcript_summary", ""),  # Extract to top level
         "usage": result.get("usage", {}),
@@ -847,6 +848,8 @@ def main():
                             logger.info("🔗 Tracee correlation report: %s", correlation_report)
                     except Exception as corr_exc:
                         logger.warning("Tracee correlation failed for %s: %s", task.task_id, corr_exc)
+                elif tracee_log:
+                    logger.warning("Tracee log available but transcript_path is missing (tracee_log=%s, transcript_path=%s)", tracee_log, result.get("transcript_path"))
 
             finally:
                 if docker.is_active():

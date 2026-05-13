@@ -954,7 +954,7 @@ def _find_recent_session_path(agent_dir: Path, started_at: float) -> Path | None
     return max(pool, key=lambda path: path.stat().st_mtime)
 
 
-def _load_transcript(agent_id: str, session_id: str, started_at: float, agent_dir_param:str) -> List[Dict[str, Any]]:
+def _load_transcript(agent_id: str, session_id: str, started_at: float, agent_dir_param:str) -> tuple[List[Dict[str, Any]], Optional[Path]]:
     agent_dir = ''
     if agent_dir_param == '':
         agent_dir = _get_agent_store_dir(agent_id)
@@ -1023,7 +1023,7 @@ def _load_transcript(agent_id: str, session_id: str, started_at: float, agent_di
                 "Transcript not found — sessions dir does not exist: %s",
                 sessions_dir,
             )
-        return []
+        return [], None
 
     transcript: List[Dict[str, Any]] = []
     for line in transcript_path.read_text(encoding="utf-8").splitlines():
@@ -1034,7 +1034,7 @@ def _load_transcript(agent_id: str, session_id: str, started_at: float, agent_di
         except json.JSONDecodeError as exc:
             logger.warning("Failed to parse transcript line: %s", exc)
             transcript.append({"raw": line, "parse_error": str(exc)})
-    return transcript
+    return transcript, transcript_path
 
 
 def _extract_usage_from_transcript(transcript: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -1685,7 +1685,7 @@ def execute_openclaw_task(
             if is_new_session and i > 1:
                 logger.info("   🔄 new_session=true: backing up transcript and starting fresh session")
                 agent_store_dir_mid = docker.ensure_transcripts_on_host(agent_id, task_agent_workspace_root)
-                mid_transcript = _load_transcript(agent_id, session_id, start_time, agent_dir_param=agent_store_dir_mid)
+                mid_transcript, _ = _load_transcript(agent_id, session_id, start_time, agent_dir_param=agent_store_dir_mid)
                 if mid_transcript:
                     transcript_backups.append(mid_transcript)
                     logger.info("   Backed up %d transcript entries", len(mid_transcript))
@@ -1755,7 +1755,7 @@ def execute_openclaw_task(
 
     agent_store_dir = docker.ensure_transcripts_on_host(agent_id, task_agent_workspace_root)
 
-    transcript = _load_transcript(agent_id, session_id, start_time, agent_dir_param=agent_store_dir)
+    transcript, transcript_path = _load_transcript(agent_id, session_id, start_time, agent_dir_param=agent_store_dir)
 
     # Merge backed-up transcripts from earlier sessions (new_session: true)
     if sessions and transcript_backups:
@@ -1821,6 +1821,7 @@ def execute_openclaw_task(
         "task_id": task.task_id,
         "status": status,
         "transcript": transcript,
+        "transcript_path": str(transcript_path) if transcript_path else None,
         "usage": usage,
         "workspace": str(workspace),
         "exit_code": exit_code,
@@ -1925,8 +1926,9 @@ def run_openclaw_prompt(
 
     agent_store_dir = docker.ensure_transcripts_on_host(agent_id, task_agent_workspace_root)
 
-    transcript = _load_transcript(agent_id, session_id, start_time, agent_store_dir)
+    transcript, transcript_path = _load_transcript(agent_id, session_id, start_time, agent_store_dir)
     execution_time = time.time() - start_time
+    logger.info("📄 Loaded transcript: %d entries, path: %s", len(transcript), transcript_path)
 
     status = "success"
     if timed_out:
@@ -1942,6 +1944,7 @@ def run_openclaw_prompt(
         "agent_id": agent_id,
         "status": status,
         "transcript": transcript,
+        "transcript_path": str(transcript_path) if transcript_path else None,
         "workspace": str(workspace),
         "exit_code": exit_code,
         "timed_out": timed_out,
