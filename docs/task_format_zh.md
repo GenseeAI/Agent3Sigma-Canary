@@ -1,6 +1,6 @@
 # Task Markdown 格式参考
 
-语言: 中文 | [English](task-markdown-format.en.md)
+语言: 中文 | [English](task_format_en.md)
 
 AgentCanary 任务使用 Markdown 文件定义。每个任务文件包含 YAML frontmatter 和固定 Markdown 章节，用于声明任务元数据、运行前环境、用户指令、预期行为和评分规则。
 

@@ -6,11 +6,11 @@
 
 **English** · [Simplified Chinese](README_zh.md)
 
-Agent3σ-Canary, abbreviated as AgentCanary, is part of the Agent3σ project. It provides security evaluation capabilities for AI Agents in realistic runtime environments. AgentCanary does not simply check whether a model gives a safe textual answer; it drives agents in controlled sandboxes to invoke real tools, process task materials in realistic formats, and evaluate complete execution traces across risk outcome, security awareness, and normal-task utility.
+Agent3σ-Canary, abbreviated as AgentCanary, is part of the [Agent3σ project](). It provides security evaluation capabilities for AI Agents in realistic runtime environments. AgentCanary does not simply check whether a model gives a safe textual answer; it drives agents in controlled sandboxes to invoke real tools, process task materials in realistic formats, and evaluate complete execution traces across risk outcome, security awareness, and normal-task utility.
 
 ## 💡 Key Features
 
-- **Comprehensive risk coverage**: Tasks are organized through a systematic "risk entry x risk impact" taxonomy. Risk entries capture different sources of risk and their threat models, including direct injection, indirect prompt injection, Skills poisoning, and memory poisoning. Risk impacts describe the different consequences an attack can cause, such as local environment damage, sensitive data leakage, and persistent state pollution. See [risk definition](docs/risk_def.md) for details.
+- **Comprehensive risk coverage**: Tasks are organized through a systematic "risk entry x risk impact" taxonomy. Risk entries capture different sources of risk and their threat models, including direct injection, indirect prompt injection, Skills poisoning, and memory poisoning. Risk impacts describe the different consequences an attack can cause, such as local environment damage, sensitive data leakage, and persistent state pollution. See [risk definition](docs/risk_def_en.md) for details.
 - **Realistic usage scenarios**: AgentCanary covers real agent workflows such as web browsing, email processing, SMS handling, and financial operations. Risk sources are embedded into the workflows that agents are expected to complete, following realistic threat models.
 - **Realistic runtime environment**: AgentCanary uses real interfaces to access resources such as web pages, email, and files, preserving high-fidelity tool-call chains and data formats. It also dynamically prepares task-specific materials, such as inboxes, test files, virtual financial accounts, and websites, so each evaluation runs with sufficient context.
 - **Sandboxed evaluation**: Each task runs in an isolated environment, reducing the impact of high-risk samples on the host and other tasks while keeping evaluations controlled and reproducible.
@@ -141,7 +141,7 @@ bash workflow/workflow_step_1_image_builder.sh
 ```
 
 > **Tip**
-> If network restrictions require an HTTP proxy for Docker builds, see [docs/docker_proxy.md](docs/docker_proxy.md).
+> If network restrictions require an HTTP proxy for Docker builds, see [docs/docker_proxy_en.md](docs/docker_proxy_en.md).
 
 ### 4. Run Evaluations
 
@@ -280,11 +280,11 @@ AgentCanary supports extending evaluation suites by adding task Markdown files. 
 
 Task files live under `tasks/` and use the `task_*.md` naming format. Prefer placing them in an existing suite directory such as `tasks/direct/`, `tasks/indirect/`, `tasks/memory/`, `tasks/chain/`, or `tasks/fptest/`. You can also run a single task directly by task ID.
 
-See [Task Markdown Format](docs/task-markdown-format.en.md) when writing custom tasks.
+See [Task Markdown Format](docs/task_format_en.md) when writing custom tasks.
 
 ## 🔍 System-Level Trajectory Collection
 
-AgentCanary supports system-level behavior trajectory collection for fine-grained analysis of agent execution and dynamic testing scenarios such as malicious Skill detection. More details will be added in the [system-level trajectory document](docs/system_trajectory_zh.md).
+AgentCanary supports system-level behavior trajectory collection for fine-grained analysis of agent execution and dynamic testing scenarios such as malicious Skill detection. More details will be added in the [system-level trajectory document](docs/system_trajectory_en.md).
 
 ## 🗺️ Roadmap
 

@@ -1,6 +1,6 @@
 # Task Markdown Format Reference
 
-Language: [中文](task-markdown-format.zh.md) | English
+Language: [Chinese](task_format_zh.md) | English
 
 AgentCanary tasks are defined as Markdown files. Each task file contains YAML frontmatter and fixed Markdown sections that declare task metadata, pre-run setup, user instructions, expected behavior, and grading rules.
 

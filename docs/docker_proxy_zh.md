@@ -1,5 +1,7 @@
 # Docker HTTP 代理构建指南
 
+语言: 中文 | [English](docker_proxy_en.md)
+
 当 Docker 构建因为网络问题无法访问 Docker Hub、apt、pip 或其他外部源时，可以通过 HTTP 代理完成构建。本文假设本机代理地址为 `http://127.0.0.1:7890`，使用时请替换成你的实际代理地址。
 
 ## Linux 配置 Docker daemon 代理
