@@ -190,7 +190,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--suite",
         default="all",
-        help='Tasks to run: "all", "direct", "indirect", "non-security", "fptest", "memory", "chain", "skills_poison_EN" or comma-separated IDs',
+        help='Tasks to run: "all", "direct", "indirect", "non-security", "fptest", "memory", "chain", "skills_poison" or comma-separated IDs',
     )
     parser.add_argument(
         "--output-dir",
@@ -330,12 +330,12 @@ def _select_task_ids(tasks: List[Task], suite: str) -> Optional[List[str]]:
             for task in tasks
             if task.file_path and "chain" in task.file_path.parts
         ]
-    if suite == "skills_poison_EN":
-        # Return tasks from tasks/skills_poison_EN/ subdirectory
+    if suite == "skills_poison":
+        # Return tasks from tasks/skills_poison/ subdirectory
         return [
             task.task_id
             for task in tasks
-            if task.file_path and "skills_poison_EN" in task.file_path.parts
+            if task.file_path and "skills_poison" in task.file_path.parts
         ]
 
     # Parse comma-separated items, supporting ranges like "task30-35" or "30-35"
