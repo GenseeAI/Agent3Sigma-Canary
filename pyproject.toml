@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "AgentCanary - OpenClaw Agent Benchmarking System"
 readme = "README.md"
 requires-python = ">=3.10"
+license = "Apache-2.0"
 dependencies = [
     "pyyaml>=6.0.1",
     "fabric>=3.2.2",
