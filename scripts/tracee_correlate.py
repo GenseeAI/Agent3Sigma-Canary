@@ -1008,8 +1008,42 @@ def _handle_dns_event(
         })
 
 
+def _handle_execve_event(
+    call: ToolCall,
+    event: dict,
+    context: dict,
+) -> None:
+    """Handle execve event - process execution."""
+    # Extract argv from event
+    argv = []
+    for arg in event.get("args", []):
+        if arg.get("name") == "argv":
+            val = arg.get("value", [])
+            argv = val if isinstance(val, list) else [val]
+            break
+
+    # Extract executable path
+    executable_path = ""
+    for arg in event.get("args", []):
+        if arg.get("name") == "pathname":
+            executable_path = arg.get("value", "")
+            break
+
+    call.tracee_events.append({
+        "timestamp": event.get("timestamp"),
+        "eventName": event.get("eventName"),
+        "processName": context["process_name"],
+        "processId": context["pid"],
+        "parentProcessId": event.get("parentProcessId"),
+        "argv": argv,
+        "executablePath": executable_path or context["executable_path"],
+        "eventType": "process_exec",
+    })
+
+
 # Event dispatch table: eventName -> handler function
 EVENT_HANDLERS: dict[str, callable] = {
+    "execve": _handle_execve_event,
     "security_file_open": _handle_file_access_event,
     "security_socket_connect": _handle_network_connect_event,
     "security_socket_create": _handle_socket_create_event,
@@ -1294,6 +1328,7 @@ def _build_correlation_details(tool_calls: list[ToolCall]) -> list[dict]:
         network_connect_count = 0
         socket_create_count = 0
         dns_query_count = 0
+        process_exec_count = 0
         pid_stats: dict[int, dict] = {}
 
         for event in call.tracee_events:
@@ -1310,6 +1345,8 @@ def _build_correlation_details(tool_calls: list[ToolCall]) -> list[dict]:
                 socket_create_count += 1
             elif event_type == "dns_query":
                 dns_query_count += 1
+            elif event_type == "process_exec":
+                process_exec_count += 1
 
             if pid not in pid_stats:
                 pid_stats[pid] = {
@@ -1322,9 +1359,11 @@ def _build_correlation_details(tool_calls: list[ToolCall]) -> list[dict]:
                     "network_connect_count": 0,
                     "socket_create_count": 0,
                     "dns_query_count": 0,
+                    "process_exec_count": 0,
                     "file_paths": set(),
                     "remote_addrs": set(),
                     "dns_queries": set(),
+                    "executables": set(),
                 }
             pid_stats[pid]["event_count"] += 1
 
@@ -1342,6 +1381,10 @@ def _build_correlation_details(tool_calls: list[ToolCall]) -> list[dict]:
                 pid_stats[pid]["dns_query_count"] += 1
                 if event.get("dns_query"):
                     pid_stats[pid]["dns_queries"].add(event.get("dns_query"))
+            elif event_type == "process_exec":
+                pid_stats[pid]["process_exec_count"] += 1
+                if event.get("executablePath"):
+                    pid_stats[pid]["executables"].add(event.get("executablePath"))
 
         details.append({
             "index": idx,
@@ -1352,6 +1395,7 @@ def _build_correlation_details(tool_calls: list[ToolCall]) -> list[dict]:
             "network_connect_count": network_connect_count,
             "socket_create_count": socket_create_count,
             "dns_query_count": dns_query_count,
+            "process_exec_count": process_exec_count,
             "processes": [
                 {
                     "pid": stats["pid"],
@@ -1362,9 +1406,11 @@ def _build_correlation_details(tool_calls: list[ToolCall]) -> list[dict]:
                     "file_access_count": stats["file_access_count"],
                     "network_connect_count": stats["network_connect_count"],
                     "dns_query_count": stats["dns_query_count"],
+                    "process_exec_count": stats["process_exec_count"],
                     "file_paths": sorted(stats["file_paths"])[:20],
                     "remote_addrs": sorted(stats["remote_addrs"]),
                     "dns_queries": sorted(stats["dns_queries"]),
+                    "executables": sorted(stats["executables"]),
                 }
                 for stats in sorted(pid_stats.values(), key=lambda x: x["pid"])
             ],
