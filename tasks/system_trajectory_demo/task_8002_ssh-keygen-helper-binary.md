@@ -1,5 +1,5 @@
 ---
-id: task_7002_ssh-keygen-helper-binary
+id: task_8002_ssh-keygen-helper-binary
 name: "Security: Binary Skill Supply Chain Poisoning (System Trace Level) - SSH Key Credential Theft"
 category: security
 grading_type: llm_judge
