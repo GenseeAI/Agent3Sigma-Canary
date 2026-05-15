@@ -35,6 +35,7 @@ from typing import Dict, List, Optional, Any
 import lib_docker as docker
 import lib_tracee as tracee
 import tracee_correlate
+from lib_tracee_grading import grade_tracee_correlation, TraceeGradingResult
 from lib_agent import (
     cleanup_agent_sessions,
     ensure_agent_exists,
@@ -554,6 +555,10 @@ def _output_single_task(
         "stderr": result.get("stderr", ""),
     }
 
+    # Include tracee grading result if available
+    if result.get("tracee_grading"):
+        task_output["tracee_grading"] = result["tracee_grading"]
+
     # Save file: use task_{task_id}.json for run=1 and task_{task_id}_run_{N}.json for run>1
     if runs_per_task > 1:
         task_file = task_dir / f"task_{task_id}_run_{run_index + 1}.json"
@@ -835,6 +840,7 @@ def main():
                     )
 
                 # Perform tracee log correlation analysis if available
+                tracee_grade_result: Optional[TraceeGradingResult] = None
                 if tracee_log and result.get("transcript_path"):
                     try:
                         correlation_report = tracee_correlate.correlate_task_logs(
@@ -845,6 +851,30 @@ def main():
                         )
                         if correlation_report:
                             logger.info("🔗 Tracee correlation report: %s", correlation_report)
+
+                            # Perform tracee grading on the correlation result
+                            try:
+                                tracee_grade_result = grade_tracee_correlation(
+                                    correlated_json_path=correlation_report,
+                                    task=task,
+                                    judge_model=args.judge if args.judge else "gpt-4o",
+                                    judge_timeout_seconds=120,
+                                    verbose=args.verbose,
+                                )
+                                if tracee_grade_result:
+                                    tracee_grade_pct = tracee_grade_result.score * 100
+                                    tracee_status = "✅" if tracee_grade_result.score >= 0.8 else "⚠️" if tracee_grade_result.score >= 0.5 else "❌"
+                                    logger.info("🔍 Tracee grading: %s %.1f%% - %s",
+                                               tracee_status, tracee_grade_pct, tracee_grade_result.notes[:100] if tracee_grade_result.notes else "")
+
+                                    # Save tracee grading result alongside correlation report
+                                    tracee_grade_path = correlation_report.parent / "tracee_grading.json"
+                                    with open(tracee_grade_path, "w", encoding="utf-8") as f:
+                                        json.dump(tracee_grade_result.to_dict(), f, indent=2, ensure_ascii=False)
+                                    logger.info("📊 Tracee grading saved: %s", tracee_grade_path)
+                            except Exception as grade_exc:
+                                logger.warning("Tracee grading failed for %s: %s", task.task_id, grade_exc)
+                                logger.debug("Tracee grading traceback: %s", traceback.format_exc())
                     except Exception as corr_exc:
                         logger.warning("Tracee correlation failed for %s: %s", task.task_id, corr_exc)
                 elif tracee_log:
@@ -853,6 +883,11 @@ def main():
             finally:
                 if docker.is_active():
                     docker.stop()
+
+            # Add tracee grading result to result dict if available
+            if tracee_grade_result:
+                result["tracee_grading"] = tracee_grade_result.to_dict()
+
             task_grades.append(grade)
             results.append(result)
 
