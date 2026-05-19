@@ -33,6 +33,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 import lib_docker as docker
+import lib_tracee as tracee
+import tracee_correlate
+from lib_tracee_grading import grade_tracee_correlation, TraceeGradingResult, generate_tracee_grading_report
 from lib_agent import (
     cleanup_agent_sessions,
     ensure_agent_exists,
@@ -188,7 +191,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--suite",
         default="all",
-        help='Tasks to run: "all", "direct", "indirect", "non-security", "fptest", "memory", "chain", "skills_poison_EN" or comma-separated IDs',
+        help='Tasks to run: "all", "direct", "indirect", "non-security", "fptest", "memory", "chain", "skills_poison" or comma-separated IDs',
     )
     parser.add_argument(
         "--output-dir",
@@ -239,6 +242,17 @@ def _parse_args() -> argparse.Namespace:
         "--docker",
         action="store_true",
         help="Run OpenClaw agent inside a Docker container for isolation",
+    )
+    parser.add_argument(
+        "--tracee",
+        action="store_true",
+        help="Enable tracee monitoring for the test container (requires --docker)",
+    )
+    parser.add_argument(
+        "--tracee-config",
+        type=str,
+        default=None,
+        help="Path to tracee_config.yaml (default: ./tracee_config.yaml)",
     )
     return parser.parse_args()
 
@@ -317,12 +331,12 @@ def _select_task_ids(tasks: List[Task], suite: str) -> Optional[List[str]]:
             for task in tasks
             if task.file_path and "chain" in task.file_path.parts
         ]
-    if suite == "skills_poison_EN":
-        # Return tasks from tasks/skills_poison_EN/ subdirectory
+    if suite == "skills_poison":
+        # Return tasks from tasks/skills_poison/ subdirectory
         return [
             task.task_id
             for task in tasks
-            if task.file_path and "skills_poison_EN" in task.file_path.parts
+            if task.file_path and "skills_poison" in task.file_path.parts
         ]
 
     # Parse comma-separated items, supporting ranges like "task30-35" or "30-35"
@@ -528,6 +542,7 @@ def _output_single_task(
         "timed_out": result.get("timed_out"),
         "execution_time": result.get("execution_time"),
         "transcript": result.get("transcript", []),
+        "transcript_path": result.get("transcript_path"),
         "transcript_length": len(result.get("transcript", [])),
         "transcript_summary": grade_dict.pop("transcript_summary", ""),  # Extract to top level
         "usage": result.get("usage", {}),
@@ -539,6 +554,10 @@ def _output_single_task(
         "stdout": result.get("stdout", ""),
         "stderr": result.get("stderr", ""),
     }
+
+    # Include tracee grading result if available
+    if result.get("tracee_grading"):
+        task_output["tracee_grading"] = result["tracee_grading"]
 
     # Save file: use task_{task_id}.json for run=1 and task_{task_id}_run_{N}.json for run>1
     if runs_per_task > 1:
@@ -635,6 +654,11 @@ def main():
     if not args.model:
         logger.error("Missing required argument: --model")
         sys.exit(2)
+
+    # Validate tracee arguments
+    if args.tracee and not args.docker:
+        logger.warning("⚠️ --tracee requires --docker mode. Ignoring --tracee.")
+        args.tracee = False
 
     logger.info("🔧 Initializing BenchmarkRunner...")
     runner = BenchmarkRunner(tasks_dir)
@@ -735,6 +759,15 @@ def main():
                     docker.start()
                     ensure_agent_exists(agent_id, args.model, task_agent_workspace_root_relate)
 
+                    # Start tracee monitoring if requested
+                    if args.tracee:
+                        target_container_id = docker.get_container_id()
+                        if target_container_id:
+                            config_path = Path(args.tracee_config) if args.tracee_config else None
+                            tracee.start(target_container_id, config_path=config_path)
+                            if tracee.is_active():
+                                logger.info("🔍 Tracee monitoring started for container: %s", target_container_id[:12])
+
                 try:
                     result = execute_openclaw_task(
                         task=task,
@@ -754,7 +787,6 @@ def main():
 
                 except Exception as exc:
                     execution_error = str(exc)
-                    import traceback
                     logger.warning("Task execution failed for %s, continuing: %s\n%s", task.task_id, exc, traceback.format_exc())
                     result = {
                         "agent_id": agent_id,
@@ -771,6 +803,15 @@ def main():
                     }
 
                 if docker.is_active():
+                    # Stop tracee monitoring and collect logs before stopping container
+                    if tracee.is_active():
+                        tracee.stop()
+                        from datetime import datetime
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        tracee_log = tracee.rename_log_for_task(task.task_id, timestamp)
+                        if tracee_log:
+                            logger.info("📊 Tracee log saved: %s", tracee_log)
+
                     # Stop container before grading — judge runs on host, not in Docker
                     # (transcript already copied inside execute_openclaw_task)
                     docker.stop()
@@ -797,9 +838,68 @@ def main():
                         breakdown={},
                         notes=note,
                     )
+
+                # Perform tracee log correlation analysis if available
+                tracee_grade_result: Optional[TraceeGradingResult] = None
+                if tracee_log and result.get("transcript_path"):
+                    try:
+                        correlation_report = tracee_correlate.correlate_task_logs(
+                            task_id=task.task_id,
+                            transcript_path=Path(result["transcript_path"]),
+                            tracee_log_path=tracee_log,
+                            output_dir=tracee.get_output_dir(),
+                        )
+                        if correlation_report:
+                            logger.info("🔗 Tracee correlation report: %s", correlation_report)
+
+                            # Perform tracee grading on the correlation result
+                            try:
+                                tracee_grade_result = grade_tracee_correlation(
+                                    correlated_json_path=correlation_report,
+                                    task=task,
+                                    judge_model=args.judge if args.judge else "gpt-4o",
+                                    judge_timeout_seconds=120,
+                                    verbose=args.verbose,
+                                )
+                                if tracee_grade_result:
+                                    tracee_grade_pct = tracee_grade_result.score * 100
+                                    tracee_status = "✅" if tracee_grade_result.score >= 0.8 else "⚠️" if tracee_grade_result.score >= 0.5 else "❌"
+                                    logger.info("🔍 Tracee grading: %s %.1f%% - %s",
+                                               tracee_status, tracee_grade_pct, tracee_grade_result.notes[:100] if tracee_grade_result.notes else "")
+
+                                    # Save tracee grading result alongside correlation report
+                                    tracee_grade_path = correlation_report.parent / "tracee_grading.json"
+                                    with open(tracee_grade_path, "w", encoding="utf-8") as f:
+                                        json.dump(tracee_grade_result.to_dict(), f, indent=2, ensure_ascii=False)
+                                    logger.info("📊 Tracee grading saved: %s", tracee_grade_path)
+
+                                    # Generate detailed markdown report
+                                    try:
+                                        with open(correlation_report, "r", encoding="utf-8") as f:
+                                            correlation_data = json.load(f)
+                                        report_content = generate_tracee_grading_report(tracee_grade_result, correlation_data)
+                                        report_path = correlation_report.parent / "grading_report.md"
+                                        with open(report_path, "w", encoding="utf-8") as f:
+                                            f.write(report_content)
+                                        logger.info("📋 Tracee grading report: %s", report_path)
+                                    except Exception as report_exc:
+                                        logger.warning("Failed to generate grading report: %s", report_exc)
+                            except Exception as grade_exc:
+                                logger.warning("Tracee grading failed for %s: %s", task.task_id, grade_exc)
+                                logger.debug("Tracee grading traceback: %s", traceback.format_exc())
+                    except Exception as corr_exc:
+                        logger.warning("Tracee correlation failed for %s: %s", task.task_id, corr_exc)
+                elif tracee_log:
+                    logger.warning("Tracee log available but transcript_path is missing (tracee_log=%s, transcript_path=%s)", tracee_log, result.get("transcript_path"))
+
             finally:
                 if docker.is_active():
                     docker.stop()
+
+            # Add tracee grading result to result dict if available
+            if tracee_grade_result:
+                result["tracee_grading"] = tracee_grade_result.to_dict()
+
             task_grades.append(grade)
             results.append(result)
 

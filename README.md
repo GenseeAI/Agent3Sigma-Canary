@@ -163,7 +163,7 @@ export DOCKER_IMAGE=openclaw-official-v20260430_120000
 | Argument | Description | Example |
 | --- | --- | --- |
 | `--model` | Target model, in `provider-id/model-id` format | `--model anthropic/claude-sonnet-4` |
-| `--suite` | Test suite | `direct`, `indirect`, `memory`, `chain`, `skills_poison_EN`, `all`, or comma-separated task IDs |
+| `--suite` | Test suite | `direct`, `indirect`, `memory`, `chain`, `skills_poison`, `all`, or comma-separated task IDs |
 | `--docker` | Run the agent inside Docker | `--docker` |
 | `--verbose` | Print more detailed logs | `--verbose` |
 | `--attack` | Attack method | `code_attack`, `pair`, `important_message`, `InjecAgent`, etc. |

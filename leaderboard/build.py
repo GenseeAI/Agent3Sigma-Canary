@@ -39,7 +39,7 @@ def parse_dir_name(dirname):
     Examples:
         0426_direct_compare -> (0426, official, direct, None)
         0426_shield_direct_compare -> (0426, shield, direct, None)
-        0426_low_skills_skills_poison_EN_compare -> (0426, official, skills_poison, low_skills)
+        0426_low_skills_skills_poison_compare -> (0426, official, skills_poison, low_skills)
     """
     # Extract date prefix
     m = re.match(r'^(\d{4})_(.+)_compare$', dirname)
@@ -56,7 +56,7 @@ def parse_dir_name(dirname):
             middle = middle[len(img_name) + 1:]
             break
 
-    # Detect special attack method prefix (e.g., low_skills_skills_poison_EN)
+    # Detect special attack method prefix (e.g., low_skills_skills_poison)
     attack_override = None
     if 'skills_poison' in middle:
         # Check for prefix before skills_poison

@@ -157,7 +157,7 @@ export DOCKER_IMAGE=openclaw-official-v20260430_120000
 | 参数 | 说明 | 示例 |
 |------|------|------|
 | `--model` | 被测模型（provider-id/model-id） | `--model anthropic/claude-sonnet-4` |
-| `--suite` | 测试套件 | `direct`, `indirect`, `memory`, `chain`, `skills_poison_EN`, `all`, 或逗号分隔的 task ID |
+| `--suite` | 测试套件 | `direct`, `indirect`, `memory`, `chain`, `skills_poison`, `all`, 或逗号分隔的 task ID |
 | `--docker` | 在 Docker 容器中运行 | `--docker` |
 | `--verbose` | 输出更详细的运行日志 | `--verbose` |
 | `--attack` | 攻击方法 | `code_attack`, `pair`, `important_message`, `InjecAgent` 等 |

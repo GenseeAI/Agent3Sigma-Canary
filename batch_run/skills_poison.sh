@@ -50,7 +50,7 @@ for d in "${!DOCKER_IMAGES[@]}"; do
             wait_one
         fi
         TAG="${DOCKER_TAG}_${RUN_TAG}_${MODEL_NAMES[$i]}"
-        LOG_FILE="$LOG_DIR/${DOCKER_TAG}_skills_poison_EN_${RUN_TAG}_${MODEL_NAMES[$i]}.log"
+        LOG_FILE="$LOG_DIR/${DOCKER_TAG}_skills_poison_${RUN_TAG}_${MODEL_NAMES[$i]}.log"
         launch_task "$TAG" "$LOG_FILE" "$DOCKER_IMG" "./scripts/run.sh ${MODELS[$i]} $COMMON_ARGS --output-dir $OUTPUT_DIR"
     done
 done
