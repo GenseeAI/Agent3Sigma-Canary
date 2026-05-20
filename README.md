@@ -295,6 +295,14 @@ AgentCanary will continue expanding security capabilities for AI Agents. Planned
 
 Community requests, scenarios, and contributions are welcome, including new tasks, agent-framework adapters, red-team methods, security-plugin integrations, analysis tools, and documentation improvements.
 
+## 🙏 Acknowledgements
+
+This repository builds on prior open-source work in agent safety. We thank the authors and maintainers of:
+
+- **[PinchBench](https://github.com/pinchbench/skill)** — Earlier codebase that this project descends from.
+- **[skill-security-reviewer](https://github.com/zast-ai/skill-security-reviewer)** — Reference for the `skill_security_reviewer_benchmark` task series under `tasks/skills_poison/`.
+- **[HarmfulSkillBench](https://github.com/TrustAIRLab/HarmfulSkillBench)** — Reference for the `harmful_skill_bench` task series under `tasks/skills_poison/`.
+
 ## 📄 License
 
 Agent3σ-Canary is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
