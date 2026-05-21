@@ -221,6 +221,8 @@ Core metrics:
 | Task Successful Rate | Task success rate | Higher is better |
 | Average Score | Overall score | Higher is better |
 
+![AgentCanary Leaderboard](images/leaderborad.png)
+
 #### Workflow Analysis - Fine-Grained Result Analysis
 
 Analyze each task in a single evaluation run, e.g., grading details, the full execution trajectory:

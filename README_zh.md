@@ -215,6 +215,8 @@ python -m http.server 5099
 | Task Successful Rate | 任务成功率 | 越高越好 |
 | Average Score | 综合得分 | 越高越好 |
 
+![AgentCanary Leaderboard](images/leaderborad.png)
+
 #### Workflow Analysis — 细粒度结果分析
 
 对单次评测的每个 task 进行分析，例如评分细项、完整执行轨迹等：
