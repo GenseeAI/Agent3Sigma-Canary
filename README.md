@@ -8,6 +8,8 @@
 
 Agent3σ-Canary, abbreviated as AgentCanary, is part of the [Agent3σ project](https://github.com/antgroup/Agent3Sigma). It provides security evaluation capabilities for AI Agents in realistic runtime environments. AgentCanary does not simply check whether a model gives a safe textual answer; it drives agents in controlled sandboxes to invoke real tools, process task materials in realistic formats, and evaluate the agent's complete execution trajectory across risk outcome, security awareness, and normal-task utility.
 
+![Agent3σ-Canary overview](images/agentcanary-overview.png)
+
 ## 💡 Key Features
 
 - **Comprehensive risk coverage**: Tasks are organized through a systematic "risk entry x risk impact" taxonomy. Risk entries capture different sources of risk and their threat models, including direct injection, indirect prompt injection, Skills poisoning, and memory poisoning. Risk impacts describe the different consequences an attack can cause, such as local environment damage, sensitive data leakage, and persistent state pollution. See [risk definition](docs/risk_def_en.md) for details.
@@ -225,14 +227,16 @@ Core metrics:
 
 #### Workflow Analysis - Fine-Grained Result Analysis
 
-Analyze each task in a single evaluation run, e.g., grading details, the full execution trajectory:
+Analyze each task in a single evaluation run, e.g., grading details, the full execution trajectory. The dashboard supports multidimensional filtering by score range, task-name regular expressions, model and other fields, making it easier to locate specific risk patterns and failed cases.
+
+![AgentCanary workflow analysis dashboard](images/task_board.jpg)
 
 ```bash
 # Start the analysis service
 bash workflow_analysis/start.sh
 ```
 
-Open `http://localhost:5000` in your browser. You can:
+Open `http://localhost:5000` in your browser.
 
 Stop the service:
 

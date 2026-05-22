@@ -2,6 +2,8 @@
 
 Agent3σ-Canary (简称 AgentCanary) 是 [Agent3σ 项目](https://github.com/antgroup/Agent3Sigma)的一部分，旨在基于真实运行环境提供面向 AI Agent 的安全评测能力。AgentCanary 不只简单地评估模型是否给出安全回答，还会在受控沙箱中驱动 Agent 调用真实工具、处理真实格式的任务物料，并基于完整执行轨迹从风险后果、安全意识与正常任务可用性等多维度进行综合评估。
 
+![Agent3σ-Canary overview](images/agentcanary-overview.png)
+
 ## 💡 关键特性
 
 - **全面的风险覆盖**：基于“风险入口 x 风险影响”的体系化定义组织评测任务，其中风险入口体现不同风险来源方式与对应威胁模型的差异，覆盖直接注入、间接提示词注入、Skills 投毒、记忆投毒等；风险影响描述攻击所能造成的后果差异，例如破坏本地环境、泄露敏感数据、污染长期状态。详见 [风险定义](docs/risk_def_zh.md)。
@@ -219,7 +221,9 @@ python -m http.server 5099
 
 #### Workflow Analysis — 细粒度结果分析
 
-对单次评测的每个 task 进行分析，例如评分细项、完整执行轨迹等：
+对单次评测的每个 task 进行分析，例如评分细项、完整执行轨迹等。该看板支持基于任务得分区间、任务名正则表达式、模型等字段进行多维度筛选，便于快速定位特定风险模式与失败样本。
+
+![AgentCanary workflow analysis dashboard](images/task_board.jpg)
 
 ```bash
 # 启动分析服务
