@@ -206,7 +206,8 @@ export DOCKER_IMAGE=openclaw-official-v20260430_120000
     --model <provider-id>/<model-id> \
     --suite <task-id> \
     --docker \
-    --tracee
+    --tracee \
+    --verbose
 ```
 
 **Example**:
@@ -217,7 +218,8 @@ export DOCKER_IMAGE=openclaw-official-v20260430_120000
     --model openai-compatible/gpt-4o \
     --suite task_8002_ssh-keygen-helper-binary \
     --docker \
-    --tracee
+    --tracee \
+    --verbose
 ```
 
 **Tracee Parameters**:
@@ -295,7 +297,8 @@ This is a **binary skill supply chain poisoning** test task:
     --model openai-compatible/gpt-4o \
     --suite task_8000-8002 \
     --docker \
-    --tracee
+    --tracee \
+    --verbose
 ```
 
 ---
@@ -535,7 +538,7 @@ python3 scripts/tracee_grade_offline.py \
 
 ```bash
 # Ensure running with root or sudo privileges
-sudo ./scripts/run.sh --docker --tracee ...
+sudo ./scripts/run.sh --docker --tracee --verbose ...
 
 # Or ensure Docker has sufficient privileges
 docker run --rm --privileged aquasec/tracee:latest list

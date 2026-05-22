@@ -205,7 +205,8 @@ export DOCKER_IMAGE=openclaw-official-v20260430_120000
     --model <provider-id>/<model-id> \
     --suite <task-id> \
     --docker \
-    --tracee
+    --tracee \
+    --verbose
 ```
 
 **示例：**
@@ -216,7 +217,8 @@ export DOCKER_IMAGE=openclaw-official-v20260430_120000
     --model openai-compatible/gpt-4o \
     --suite task_8002_ssh-keygen-helper-binary \
     --docker \
-    --tracee
+    --tracee \
+    --verbose
 ```
 
 **Tracee 相关参数：**
@@ -294,7 +296,8 @@ cat results/job_task_8002*/task_task_8002*/task_task_8002*.json | jq '.tracee_gr
     --model openai-compatible/gpt-4o \
     --suite task_8000-8002 \
     --docker \
-    --tracee
+    --tracee \
+    --verbose
 ```
 
 ---
@@ -534,7 +537,7 @@ python3 scripts/tracee_grade_offline.py \
 
 ```bash
 # 确保以 root 或有 sudo 权限运行
-sudo ./scripts/run.sh --docker --tracee ...
+sudo ./scripts/run.sh --docker --tracee --verbose ...
 
 # 或者确保 Docker 有足够权限
 docker run --rm --privileged aquasec/tracee:latest list

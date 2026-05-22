@@ -148,10 +148,10 @@ bash workflow/workflow_step_1_image_builder.sh
 export DOCKER_IMAGE=openclaw-official-v20260430_120000
 
 # 评测单个模型
-./scripts/run.sh --model <provider-id>/<model-id> --suite <suite> --docker
+./scripts/run.sh --model <provider-id>/<model-id> --suite <suite> --docker --verbose
 
 # 示例：使用 openai-compatible provider 下的 gpt-4o 模型，运行 direct 测试套件
-./scripts/run.sh --model openai-compatible/gpt-4o --suite direct --docker
+./scripts/run.sh --model openai-compatible/gpt-4o --suite direct --docker --verbose
 ```
 
 **常用参数：**

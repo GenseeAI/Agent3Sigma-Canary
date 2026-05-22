@@ -154,10 +154,10 @@ bash workflow/workflow_step_1_image_builder.sh
 export DOCKER_IMAGE=openclaw-official-v20260430_120000
 
 # Evaluate one model
-./scripts/run.sh --model <provider-id>/<model-id> --suite <suite> --docker
+./scripts/run.sh --model <provider-id>/<model-id> --suite <suite> --docker --verbose
 
 # Example: run the direct suite with gpt-4o from the openai-compatible provider
-./scripts/run.sh --model openai-compatible/gpt-4o --suite direct --docker
+./scripts/run.sh --model openai-compatible/gpt-4o --suite direct --docker --verbose
 ```
 
 **Common arguments:**
