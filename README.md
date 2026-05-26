@@ -313,6 +313,11 @@ This repository builds on prior open-source work in agent safety. We thank the a
 
 Agent3σ-Canary is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
 
+## Authors
+
+Peiyang Li, Songping Wang, Yi Huang, Yanhua Shi, Chenhao Zhang, Qi Li, Caifeng Shan, Yueming Lyu, Ding Li, Fengting Li, Chao Feng, Chuanqun Zhu, Liang Chen
+
+
 ## ⚠️ Safety Notice
 
 AgentCanary is intended only for authorized security research, defensive evaluation, and benchmark reproduction. The benchmark includes adversarial prompts, prompt-injection payloads, malicious-skill scenarios, credential-exfiltration simulations, and fixture files that may look like sensitive credentials. Run evaluations in isolated Docker containers and disposable workspaces.
