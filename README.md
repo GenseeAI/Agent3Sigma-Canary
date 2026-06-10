@@ -8,7 +8,7 @@
 
 Agent3σ-Canary, abbreviated as AgentCanary, is part of the [Agent3σ project](https://github.com/antgroup/Agent3Sigma). It provides security evaluation capabilities for AI Agents in realistic runtime environments. AgentCanary does not simply check whether a model gives a safe textual answer; it drives agents in controlled sandboxes to invoke real tools, process task materials in realistic formats, and evaluate the agent's complete execution trajectory across risk outcome, security awareness, and normal-task utility.
 
-![Agent3σ-Canary overview](images/agentcanary-overview.png)
+![Agent3σ-Canary overview](images/agentcanary-overview.jpg)
 
 ## 💡 Key Features
 
@@ -319,7 +319,17 @@ Peiyang Li, Songping Wang, Yi Huang, Yanhua Shi, Chenhao Zhang, Qi Li, Caifeng S
 
 ## 📝 Citation
 
-Our technical report will be released soon.
+```bibtex
+@misc{li2026agentcanarysecurityevaluationframework,
+      title={AgentCanary: A Security Evaluation Framework for Autonomous AI Agents in Real Executable Environments}, 
+      author={Peiyang Li and Songping Wang and Yi Huang and Yanhua Shi and Chenhao Zhang and Qi Li and Yueming Lyu and Caifeng Shan and Fengting Li and Chao Feng and Chuanqun Zhu and Liang Chen},
+      year={2026},
+      eprint={2606.10484},
+      archivePrefix={arXiv},
+      primaryClass={cs.CR},
+      url={https://arxiv.org/abs/2606.10484}, 
+}
+```
 
 ## ⚠️ Safety Notice
 
