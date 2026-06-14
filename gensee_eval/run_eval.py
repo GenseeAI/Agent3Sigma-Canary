@@ -69,22 +69,39 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
 
 
 def dry_run(tasks) -> None:
-    runnable, skipped = [], []
+    from collections import Counter, defaultdict
+
+    reason_of = {t.task_id: environment.classify(t.pre_setup) for t in tasks}
+    runnable = [t for t in tasks if reason_of[t.task_id] is None]
+    print(
+        f"\nLoadable: {len(tasks)}   runnable: {len(runnable)}   "
+        f"needs-simulator/unsupported: {len(tasks) - len(runnable)}"
+    )
+    print("(loadable != scored — only the runnable subset reaches the judge)\n")
+
+    # Per-family breakdown — suites may be nested (e.g. skills_poison/<family>),
+    # so report runnable vs each skip reason per group.
+    by_group: dict = defaultdict(list)
     for t in tasks:
-        reason = environment.classify(t.pre_setup)
-        (skipped if reason else runnable).append((t, reason))
-    print(f"\nSuite tasks: {len(tasks)}   runnable: {len(runnable)}   needs-simulator/unsupported: {len(skipped)}\n")
-    print("RUNNABLE (file/exec/memory — port cleanly):")
-    for t, _ in runnable:
+        by_group[(t.suite, t.family)].append(t)
+    print(f"{'suite / family':52} {'load':>5} {'run':>5}  skip-reasons")
+    for (suite, family), group in sorted(by_group.items()):
+        run = sum(1 for t in group if reason_of[t.task_id] is None)
+        reasons = Counter(reason_of[t.task_id] for t in group if reason_of[t.task_id])
+        label = suite + (f" / {family}" if family else "")
+        rtxt = ", ".join(f"{r}={c}" for r, c in reasons.most_common())
+        print(f"{label:52} {len(group):>5} {run:>5}  {rtxt}")
+
+    cap = 60
+    print(f"\nRUNNABLE detail (first {cap}):")
+    for t in runnable[:cap]:
         turns = len(t.turns)
         ns = sum(1 for s in t.turns if s.new_session)
         mp = any(s.get("type") == "memory_poison" for s in t.pre_setup)
         tag = f"{turns}-turn" + (f", {ns}xNEW-SESSION" if ns else "") + (", mem-poison" if mp else "")
         print(f"  {t.task_id:38} | {tag:24} | {t.name}")
-    if skipped:
-        print("\nSKIPPED (needs a service simulator):")
-        for t, reason in skipped:
-            print(f"  {t.task_id:38} | {reason}")
+    if len(runnable) > cap:
+        print(f"  ... and {len(runnable) - cap} more runnable")
 
 
 def main(argv: List[str]) -> int:

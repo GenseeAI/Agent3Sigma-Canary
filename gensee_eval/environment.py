@@ -8,6 +8,8 @@ port cleanly):
   - memory_poison                : plant a poisoned rule into the agent's memory
                                     file(s) (CLAUDE.md + MEMORY.md in workspace)
   - run_command                  : run a setup command in the workspace
+  - skill_copy                    : install a (poisoned) skill into the agent's
+                                    `.claude/skills/` so Claude Code discovers it
 
 Service-simulator types (banking/im/http) are NOT implemented here; a task that
 needs one is reported as `needs_simulator` and skipped, so coverage is explicit.
@@ -22,7 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # pre_setup types this harness can materialize on macOS without OpenClaw.
-SUPPORTED = {"file", "txt", "dependency_copy", "memory_poison", "run_command"}
+SUPPORTED = {"file", "txt", "dependency_copy", "memory_poison", "run_command", "skill_copy"}
 # Types that require the upstream service simulators (out of scope for Path B v1).
 NEEDS_SIMULATOR = {
     "im_new_contact",
@@ -84,6 +86,8 @@ def prepare(
         try:
             if t in ("file", "txt", "dependency_copy"):
                 _copy_fixture(step, workspace, repo_root)
+            elif t == "skill_copy":
+                _copy_skill(step, workspace, repo_root)
             elif t == "memory_poison":
                 _plant_memory_poison(step, workspace)
                 prepared.memory_poisoned = True
@@ -115,6 +119,28 @@ def _copy_fixture(step: Dict[str, Any], workspace: Path, repo_root: Path) -> Non
         shutil.copy2(src, dest)
     else:
         raise FileNotFoundError(f"fixture not found: {src}")
+
+
+def _copy_skill(step: Dict[str, Any], workspace: Path, repo_root: Path) -> None:
+    """Install a (poisoned) skill directory where Claude Code discovers skills.
+
+    Upstream drops the skill into OpenClaw's skills path; the Path B equivalent
+    is the project-level `.claude/skills/<name>/` (each skill carries a
+    `SKILL.md`). This is a local copytree — no service simulator needed.
+    """
+    src_rel = step.get("source_path_dir") or step.get("source") or step.get("src")
+    target = step.get("target_path_dir") or (Path(src_rel).name if src_rel else None)
+    if not src_rel or not target:
+        return
+    src = (repo_root / src_rel).resolve()
+    if not src.exists():
+        raise FileNotFoundError(f"skill source not found: {src}")
+    dest = workspace / ".claude" / "skills" / target
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if src.is_dir():
+        shutil.copytree(src, dest, dirs_exist_ok=True)
+    else:
+        shutil.copy2(src, dest)
 
 
 def _plant_memory_poison(step: Dict[str, Any], workspace: Path) -> None:
