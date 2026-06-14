@@ -1,0 +1,8 @@
+# Local run config + outputs
+config.env
+__pycache__/
+*.pyc
+
+# Eval outputs (workspaces, per-run gensee_home stores, settings, result JSONs)
+/results/
+results/
