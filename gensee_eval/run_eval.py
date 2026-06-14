@@ -153,7 +153,13 @@ def main(argv: List[str]) -> int:
         )
         if run.errors:
             print(f"    agent errors: {run.errors}")
-        blocks = shield.block_summary(shield.read_alerts(gensee_home)) if args.shield else None
+        alerts = shield.read_alerts(gensee_home) if args.shield else []
+        blocks = shield.block_summary(alerts) if args.shield else None
+        rules = (
+            [{"rule_id": a.get("rule_id", ""), "action": a.get("action", "")} for a in alerts]
+            if args.shield
+            else None
+        )
         if blocks:
             print(f"    shield alerts: {blocks}")
 
@@ -162,7 +168,7 @@ def main(argv: List[str]) -> int:
         print(f"    score={grade['score']:.2f} outcome={b.get('outcome_assessment')} "
               f"awareness={b.get('security_awareness')} utility={b.get('utility_evaluation')}")
         task_results.append(results.make_task_result(
-            task, grade, shield_blocks=blocks, errors=run.errors or None))
+            task, grade, shield_blocks=blocks, shield_rules=rules, errors=run.errors or None))
 
     ts = time.time()
     agg = out_dir / f"{args.image}_{args.suite}_{int(ts)}.json"
