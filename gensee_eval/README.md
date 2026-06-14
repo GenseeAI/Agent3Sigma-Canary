@@ -50,6 +50,32 @@ paths differ on macOS; the judge scores the agent's behavior/refusal, and
 agent-shield's policy already blocks the macOS-relevant equivalents
 (`~/.ssh`, out-of-workspace writes, reverse shells, etc.).
 
+## ⚠️ Safety — run this in a throwaway VM
+
+The benchmark contains **real destructive payloads** (credential reads/exfil,
+reverse shells, fork bombs, disk fills), and the harness runs Claude Code with
+`--dangerously-skip-permissions` so the *only* gate is the shield. If the agent
+complies and the shield misses (or in a **baseline run there is no shield**),
+those actions execute on the host for real.
+
+**Run it inside a disposable macOS VM with no real credentials** —
+see [docs/throwaway-macos-vm.md](docs/throwaway-macos-vm.md). The runner refuses
+to start without `--i-understand-the-risk` (or `GENSEE_EVAL_ACK_RISK=1`).
+
+Built-in local-host mitigations (not a substitute for the VM, and they do **not**
+contain network egress):
+
+| Flag (default) | Mitigates |
+| --- | --- |
+| `--fake-home` (on) | per-task decoy `HOME` so `~/.ssh`, `~/.aws`, `.bashrc`, … are throwaway |
+| env allowlist (always) | child env is built from a minimal allowlist — `AWS_*`, judge keys, `*_TOKEN` are dropped; only the agent's `ANTHROPIC_*` auth is forwarded |
+| `--max-procs` / `--max-file-mb` / `--max-cpu-seconds` | `rlimit` caps for fork bombs / zip bombs / runaway loops |
+
+Because the env is scrubbed and `HOME` is faked, the agent authenticates via
+`ANTHROPIC_API_KEY` (export it before running). If you rely on a logged-in
+Claude session instead, pass `--copy-claude-auth` (copies your Claude credential
+into the sandbox home — only do this inside the VM).
+
 ## Prerequisites
 
 - macOS, Python 3.10+ (`pyyaml` — already in the repo's `uv` env)
@@ -69,16 +95,19 @@ export GENSEE_JUDGE_MODEL="gpt-4o"
 ## Usage
 
 ```bash
-# 1. See what runs vs. needs a simulator (no agent/judge required):
+# 1. See what runs vs. needs a simulator (no agent/judge/ack needed):
 python -m gensee_eval.run_eval --suite chain --dry-run
 
+# (inside the VM) export the agent + judge credentials:
+export ANTHROPIC_API_KEY="sk-ant-..."
+
 # 2. Baseline Claude Code, no shield:
-python -m gensee_eval.run_eval --suite chain \
+python -m gensee_eval.run_eval --suite chain --i-understand-the-risk \
   --model claude-sonnet-4 --image official \
   --output-dir results/baseline
 
 # 3. With agent-shield hooks enabled:
-python -m gensee_eval.run_eval --suite chain \
+python -m gensee_eval.run_eval --suite chain --i-understand-the-risk \
   --model claude-sonnet-4 --shield \
   --gensee-bin ../agent-shield/target/debug/gensee \
   --image gensee --output-dir results/gensee
@@ -112,6 +141,7 @@ Successful Rate**.
 | `tasks.py` | `task_*.md` loader (frontmatter + sections, agent-agnostic) |
 | `environment.py` | per-task workspace + `pre_setup` materialization |
 | `claude_agent.py` | Claude Code adapter (`claude -p` stream-json, session replay) |
+| `sandbox.py` | host protection: fake HOME, env allowlist, rlimits, risk gate |
 | `shield.py` | agent-shield hook settings + `alerts` ground-truth readback |
 | `judge.py` | LLM judge (upstream prompt + breakdown schema) |
 | `results.py` | leaderboard-compatible aggregate + summary metrics |

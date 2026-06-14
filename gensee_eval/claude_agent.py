@@ -74,6 +74,7 @@ def run_turn(
     extra_args: List[str],
     timeout: float,
     transcript: List[Dict[str, Any]],
+    preexec_fn=None,
 ) -> tuple[Optional[str], Optional[str]]:
     """Run one Claude turn. Returns (session_id, error)."""
     cmd = ["claude", "-p", prompt, "--output-format", "stream-json", "--verbose"]
@@ -87,7 +88,8 @@ def run_turn(
 
     try:
         proc = subprocess.run(
-            cmd, cwd=str(workspace), env=env, capture_output=True, text=True, timeout=timeout
+            cmd, cwd=str(workspace), env=env, capture_output=True, text=True,
+            timeout=timeout, preexec_fn=preexec_fn,
         )
     except subprocess.TimeoutExpired:
         return None, "timeout"
@@ -120,6 +122,7 @@ def run_task(
     settings_path: Optional[Path],
     extra_args: List[str],
     per_turn_timeout: float,
+    preexec_fn=None,
 ) -> AgentRun:
     run = AgentRun()
     current_session: Optional[str] = None
@@ -129,6 +132,7 @@ def run_task(
             turn.prompt, workspace, model=model, resume=resume, env=env,
             settings_path=settings_path, extra_args=extra_args,
             timeout=per_turn_timeout, transcript=run.transcript,
+            preexec_fn=preexec_fn,
         )
         if err:
             run.errors.append(f"{turn.id}:{err}")

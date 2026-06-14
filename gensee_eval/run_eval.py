@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 from typing import List
 
-from . import claude_agent, environment, judge, results, shield
+from . import claude_agent, environment, judge, results, sandbox, shield
 from .tasks import load_suite
 
 HERE = Path(__file__).resolve().parent
@@ -52,6 +52,19 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     p.add_argument("--no-skip-permissions", dest="skip_permissions", action="store_false")
     p.add_argument("--dry-run", action="store_true", help="classify tasks and exit; no agent/judge needed")
     p.add_argument("--verbose", action="store_true")
+    # --- host protection (see sandbox.py / docs/throwaway-macos-vm.md) ---
+    p.add_argument("--i-understand-the-risk", dest="ack_risk", action="store_true",
+                   help="required to run the agent; the benchmark has real destructive payloads")
+    p.add_argument("--fake-home", dest="fake_home", action="store_true", default=True,
+                   help="per-task decoy HOME so ~/.ssh, ~/.aws, rc files are throwaway (default on)")
+    p.add_argument("--no-fake-home", dest="fake_home", action="store_false")
+    p.add_argument("--copy-claude-auth", action="store_true",
+                   help="copy real Claude auth into the fake HOME (risky; prefer ANTHROPIC_API_KEY)")
+    p.add_argument("--forward-env", action="append", default=[], metavar="VAR",
+                   help="extra env var to forward to the agent (repeatable)")
+    p.add_argument("--max-procs", type=int, default=512, help="rlimit on process count (fork-bomb cap)")
+    p.add_argument("--max-file-mb", type=int, default=512, help="rlimit on file size (zip-bomb cap)")
+    p.add_argument("--max-cpu-seconds", type=int, default=120, help="rlimit on CPU seconds per process")
     return p.parse_args(argv)
 
 
@@ -87,6 +100,9 @@ def main(argv: List[str]) -> int:
         dry_run(tasks)
         return 0
 
+    # Host-protection gate: refuse to run real destructive payloads unless ack'd.
+    sandbox.enforce_risk_gate(args.ack_risk, args.fake_home, args.shield)
+
     if not judge.judge_configured():
         print("ERROR: judge model not configured. Set GENSEE_JUDGE_BASE_URL / "
               "GENSEE_JUDGE_API_KEY (and optionally GENSEE_JUDGE_MODEL).", file=sys.stderr)
@@ -97,8 +113,12 @@ def main(argv: List[str]) -> int:
 
     out_dir = Path(args.output_dir)
     workspaces = out_dir / "workspaces"
+    homes = out_dir / "fake_homes"
     extra_args = ["--dangerously-skip-permissions"] if args.skip_permissions else []
     policy_file = Path(args.gensee_policy_file) if args.gensee_policy_file else None
+    preexec = sandbox.rlimit_preexec(
+        args.max_procs, args.max_file_mb * 1024 * 1024, args.max_cpu_seconds
+    )
 
     task_results = []
     for i, task in enumerate(tasks, 1):
@@ -109,7 +129,14 @@ def main(argv: List[str]) -> int:
             task_results.append(results.make_task_result(task, None, skipped=prepared.skip_reason))
             continue
 
-        env = dict(os.environ)
+        # Per-task throwaway HOME with decoy secrets, and a minimal-allowlist env.
+        fake_home = None
+        if args.fake_home:
+            fake_home = sandbox.make_fake_home(homes / task.task_id)
+            if args.copy_claude_auth:
+                sandbox.copy_claude_auth(Path(os.path.expanduser("~")), fake_home)
+        env = sandbox.build_child_env(fake_home=fake_home, forward_vars=args.forward_env)
+
         settings_path = None
         gensee_home = None
         if args.shield:
@@ -122,7 +149,7 @@ def main(argv: List[str]) -> int:
         run = claude_agent.run_task(
             task, prepared.workspace, model=args.model, env=env,
             settings_path=settings_path, extra_args=extra_args,
-            per_turn_timeout=args.per_turn_timeout,
+            per_turn_timeout=args.per_turn_timeout, preexec_fn=preexec,
         )
         if run.errors:
             print(f"    agent errors: {run.errors}")
