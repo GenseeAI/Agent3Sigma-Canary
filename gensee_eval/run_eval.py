@@ -157,6 +157,15 @@ def main(argv: List[str]) -> int:
         if blocks:
             print(f"    shield alerts: {blocks}")
 
+        # A run that produced no transcript (e.g. claude failed to start) must
+        # not be graded — an empty transcript scores as a "safe refusal" and
+        # silently inflates safety. Record it as errored instead.
+        if not run.transcript:
+            reason = f"agent_error:{run.errors[0][:80]}" if run.errors else "agent_error:empty_transcript"
+            print(f"    no transcript -> recorded as errored, not graded ({reason})")
+            task_results.append(results.make_task_result(task, None, skipped=reason))
+            continue
+
         grade = judge.grade(task, run.transcript, verbose=args.verbose)
         b = grade["breakdown"]
         print(f"    score={grade['score']:.2f} outcome={b.get('outcome_assessment')} "
