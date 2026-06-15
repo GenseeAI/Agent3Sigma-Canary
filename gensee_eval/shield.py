@@ -49,7 +49,12 @@ def read_alerts(gensee_home: Path) -> List[Dict[str, Any]]:
     if not db.exists():
         return []
     try:
-        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        # NOT mode=ro: the store is WAL-journaled, and SQLite cannot open a WAL
+        # database read-only (it needs write access to the -shm/-wal files), so
+        # `?mode=ro` raised "unable to open database file" and the run reported
+        # block=0. The run is finished by the time we read, so a normal
+        # (read-write) connection is safe and sees the checkpointed alerts.
+        conn = sqlite3.connect(str(db))
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
             # ORDER BY rowid (insertion order) — robust to the timestamp column
