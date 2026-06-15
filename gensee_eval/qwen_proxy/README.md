@@ -8,10 +8,17 @@ model that actually fails.
 
 ## Topology
 ```
-[bench host] claude -p  --(Anthropic /v1/messages)-->  litellm shim (:4000)
+[bench host] claude -p  --(Anthropic /v1/messages)-->  claude-code-proxy (:4000)
    --(OpenAI /v1/chat/completions)-->  Qwen OpenAI endpoint
    -->  cluster forwarder (gensee-397b)  -->  Qwen3.5-397B
 ```
+
+> NOTE: do NOT use LiteLLM here. Its `/v1/messages` ingress cannot bridge to a
+> chat-completions-only backend — newer LiteLLM routes to the OpenAI Responses
+> API (`/v1/responses`, which the forwarder rejects per category) and older
+> LiteLLM errors `Anthropic messages provider config not found`. Use
+> `claude-code-proxy`, which implements `/v1/messages` and calls
+> `/chat/completions` directly (tool-use + streaming).
 The Qwen OpenAI endpoint is the cluster forwarder reached via `kubectl
 port-forward` (same access pattern `platform-analysis` uses). `../remote-llm-api`
 (SSH reverse tunnel from the OpenClaw sandbox) is an alternative if the bench
@@ -45,37 +52,49 @@ curl -sS -o /dev/null -w '%{http_code}\n' "$QWEN_OPENAI_BASE/chat/completions" \
 ```
 (The `mint_batch_token` payload may expire — re-mint if a long run starts 401ing.)
 
-## 2. Start the Anthropic shim
+## 2. Start the Anthropic shim (claude-code-proxy)
 Reuses `QWEN_OPENAI_BASE` and `GENSEE_API_KEY` exported in step 1.
 ```bash
-pip install 'litellm[proxy]'
-litellm --config gensee_eval/qwen_proxy/litellm_config.yaml --port 4000
+git clone https://github.com/fuergaosi233/claude-code-proxy && cd claude-code-proxy
+pip install -r requirements.txt          # or: uv sync
+export OPENAI_API_KEY="$GENSEE_API_KEY"          # minted Fernet bearer
+export OPENAI_BASE_URL="$QWEN_OPENAI_BASE"       # .../gensee-397b/v1  -> it calls /chat/completions
+export BIG_MODEL="Gensee/Qwen3.5-397B"           # opus  -> Qwen
+export MIDDLE_MODEL="Gensee/Qwen3.5-397B"        # sonnet-> Qwen
+export SMALL_MODEL="Gensee/Qwen3.5-397B"         # haiku -> Qwen
+export HOST=0.0.0.0 PORT=4000
+python start_proxy.py
 ```
+The proxy maps the Claude model name Claude Code sends (opus/sonnet/haiku) to
+BIG/MIDDLE/SMALL — all set to Qwen — so the agent runs **without** `--model`.
 
 ## 3. SMOKE TEST FIRST — confirm tool-use survives the translation
 Claude Code is tuned for Claude models; a non-Claude model via an
 Anthropic↔OpenAI shim can mangle tool calls. Before any real run, confirm the
 agent can issue a Bash tool call end-to-end:
 ```bash
+# On the VM. NO --model: let Claude Code send its default Claude id; the proxy
+# maps it to Qwen. (If using the split topology, ANTHROPIC_BASE_URL points at
+# the LOCAL machine's IP, not localhost.)
 ANTHROPIC_BASE_URL=http://localhost:4000 ANTHROPIC_AUTH_TOKEN=sk-anything \
   claude -p "run 'echo hello' with the Bash tool and report the output" \
-  --model "Gensee/Qwen3.5-397B" --output-format stream-json --verbose --dangerously-skip-permissions
+  --output-format stream-json --verbose --dangerously-skip-permissions
 ```
 If you see a real `toolCall` for Bash + the output, the chain works. If it only
-emits text (no tool calls), Qwen isn't producing OpenAI tool_calls through the
-shim — stop here (see Caveats).
+emits text (no tool calls), Qwen isn't producing tool_calls through the shim —
+stop here (see Caveats).
 
 ## 4. Run the benchmark (control vs shielded)
 ```bash
-export ANTHROPIC_BASE_URL=http://localhost:4000
+export ANTHROPIC_BASE_URL=http://localhost:4000   # or http://<LOCAL_IP>:4000 (split topology)
 export ANTHROPIC_AUTH_TOKEN=sk-anything
-export GENSEE_TARGET_MODEL="Gensee/Qwen3.5-397B"
+# leave GENSEE_TARGET_MODEL unset (no --model) so the proxy's model mapping applies;
 # keep the JUDGE on a strong model (Opus 4.6 per the paper) via GENSEE_JUDGE_*
 
-./run_suite.sh skills_poison        # or: chain, direct, or a task-id subset
+./run_suite.sh direct               # start small; then skills_poison / chain
 ```
 `gensee_eval` forwards `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` into the agent
-sandbox (sandbox._AUTH_FORWARD), and `--model` flows to `claude -p`.
+sandbox (sandbox._AUTH_FORWARD).
 
 ## Caveats (important)
 - **Fragile agent.** Claude Code + Qwen-via-shim may degrade tool use. The paper
