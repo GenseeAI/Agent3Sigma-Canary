@@ -29,7 +29,8 @@ class Task:
     task_id: str
     name: str
     category: str
-    suite: str  # directory name: chain, memory, direct, indirect, skills_poison
+    suite: str  # logical suite: chain, memory, direct, indirect, skills_poison
+    family: str  # sub-directory under the suite (e.g. skills_poison benchmark family); "" if flat
     path: Path
     prompt: str = ""
     expected_behavior: str = ""
@@ -83,16 +84,39 @@ def _expand_env(value: str) -> str:
     return re.sub(r"\$\{(\w+)\}", lambda m: os.environ.get(m.group(1), m.group(0)), value)
 
 
+KNOWN_SUITES = (
+    "chain",
+    "memory",
+    "direct",
+    "indirect",
+    "skills_poison",
+    "system_trajectory_demo",
+)
+
+
+def _derive_suite_family(path: Path) -> tuple[str, str]:
+    """Map a task path to (suite, family).
+
+    Suites may be nested (e.g. `skills_poison/<benchmark>/<category>/task_*.md`),
+    so the suite is the closest known-suite ancestor — not `path.parent.name`,
+    which would otherwise yield the family/category and hide the whole suite from
+    `load_suite`. `family` is the first directory under the suite ("" if flat).
+    """
+    parts = path.parts
+    suite = next((p for p in reversed(parts) if p in KNOWN_SUITES), path.parent.name)
+    family = ""
+    if suite in parts:
+        suite_idx = len(parts) - 1 - list(reversed(parts)).index(suite)
+        between = parts[suite_idx + 1 : -1]  # dirs between the suite and the file
+        family = between[0] if between else ""
+    return suite, family
+
+
 def load_task(path: Path) -> Task:
     raw = path.read_text(encoding="utf-8", errors="replace")
     fm, body = _parse_frontmatter(raw)
     sections = _split_sections(body)
-    # The suite is the top-level directory under `tasks/` (e.g. "skills_poison"),
-    # not the immediate parent — skills_poison tasks live in nested category dirs
-    # (skills_poison/<bench>/<category>/task_*.md), so using the immediate parent
-    # would make `--suite skills_poison` match nothing.
-    parts = path.parts
-    suite = parts[parts.index("tasks") + 1] if "tasks" in parts else path.parent.name
+    suite, family = _derive_suite_family(path)
 
     sessions: List[Session] = []
     for s in fm.get("sessions") or []:
@@ -109,6 +133,7 @@ def load_task(path: Path) -> Task:
         name=str(fm.get("name") or path.stem),
         category=str(fm.get("category") or "security"),
         suite=suite,
+        family=family,
         path=path,
         prompt=_expand_env(sections.get("Prompt", str(fm.get("prompt", "")))),
         expected_behavior=sections.get("Expected Behavior", ""),
@@ -139,8 +164,7 @@ def load_suite(tasks_dir: Path, suite: str) -> List[Task]:
             print(f"  [skip] {p}: {exc}")
     if suite == "all":
         return tasks
-    known = {"chain", "memory", "direct", "indirect", "skills_poison", "system_trajectory_demo"}
-    if suite in known:
+    if suite in KNOWN_SUITES:
         return [t for t in tasks if t.suite == suite]
     # treat as comma-separated id prefixes
     wanted = [s.strip() for s in suite.split(",") if s.strip()]

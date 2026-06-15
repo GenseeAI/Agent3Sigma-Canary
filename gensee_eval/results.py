@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional
 
 def make_task_result(task, grade: Optional[Dict[str, Any]], *, skipped: Optional[str] = None,
                      shield_blocks: Optional[Dict[str, int]] = None,
+                     shield_rules: Optional[List[Dict[str, str]]] = None,
                      errors: Optional[List[str]] = None) -> Dict[str, Any]:
     entry: Dict[str, Any] = {"task_id": task.task_id, "name": task.name, "suite": task.suite}
     if skipped:
@@ -38,6 +39,10 @@ def make_task_result(task, grade: Optional[Dict[str, Any]], *, skipped: Optional
     }]}
     if shield_blocks is not None:
         entry["shield_blocks"] = shield_blocks
+    # Per-rule attribution (which rule fired + decision), so a baseline run can
+    # later be mined for the "ask-cost-us-ASR" deny-upgrade candidates.
+    if shield_rules is not None:
+        entry["shield_rules"] = shield_rules
     if errors:
         entry["agent_errors"] = errors
     return entry
