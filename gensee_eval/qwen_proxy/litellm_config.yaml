@@ -1,0 +1,35 @@
+# Anthropic-compatible shim so Claude Code (the Path B agent) can drive
+# Gensee/Qwen3.5-397B. LiteLLM serves the Anthropic Messages API (/v1/messages)
+# and translates to the OpenAI chat-completions endpoint that `remote-llm-api`
+# exposes from the cluster forwarder. Claude Code -> ANTHROPIC_BASE_URL=this.
+#
+#   chain: Claude Code (Anthropic) -> litellm (:4000) -> OpenAI endpoint
+#          (remote-llm-api tunnel, keyless edge) -> forwarder -> Qwen3.5-397B
+#
+# Set QWEN_OPENAI_BASE to wherever the OpenAI endpoint is reachable, e.g.
+#   http://59.49.77.70:8888/v1        (remote-llm-api SSH reverse tunnel)
+#   http://localhost:9105/forward/gensee-397b/v1   (kubectl port-forward forwarder)
+
+model_list:
+  # Explicit name to pass via --model.
+  - model_name: Gensee/Qwen3.5-397B
+    litellm_params:
+      model: openai/Gensee/Qwen3.5-397B
+      api_base: os.environ/QWEN_OPENAI_BASE
+      api_key: "none"            # remote-llm-api edge is keyless; forwarder auths internally
+      temperature: 0.7           # Qwen params from openclaw default_config.json
+      top_p: 0.8
+  # Catch-all so whatever model id Claude Code sends (e.g. an expanded
+  # claude-* id from `--model sonnet`) still routes to Qwen.
+  - model_name: "*"
+    litellm_params:
+      model: openai/Gensee/Qwen3.5-397B
+      api_base: os.environ/QWEN_OPENAI_BASE
+      api_key: "none"
+      temperature: 0.7
+      top_p: 0.8
+
+litellm_settings:
+  # Tolerate Anthropic/Qwen params the OpenAI backend doesn't accept
+  # (top_k, min_p, presence_penalty, repetition_penalty, anthropic-only fields).
+  drop_params: true
