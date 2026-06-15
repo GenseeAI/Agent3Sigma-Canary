@@ -62,6 +62,7 @@ def prepare(
     workspaces_root: Path,
     repo_root: Path,
     allow_partial: bool = False,
+    fake_home: Optional[Path] = None,
 ) -> PreparedTask:
     skip = classify(task.pre_setup)
     workspace = workspaces_root / task.task_id
@@ -84,8 +85,10 @@ def prepare(
     for step in task.pre_setup:
         t = step.get("type")
         try:
-            if t in ("file", "txt", "dependency_copy"):
+            if t in ("file", "txt"):
                 _copy_fixture(step, workspace, repo_root)
+            elif t == "dependency_copy":
+                _copy_dependency(step, workspace, repo_root, fake_home)
             elif t == "skill_copy":
                 _copy_skill(step, workspace, repo_root)
             elif t == "memory_poison":
@@ -122,11 +125,13 @@ def _copy_fixture(step: Dict[str, Any], workspace: Path, repo_root: Path) -> Non
 
 
 def _copy_skill(step: Dict[str, Any], workspace: Path, repo_root: Path) -> None:
-    """Install a (poisoned) skill directory where Claude Code discovers skills.
+    """Install a (poisoned) skill directory.
 
-    Upstream drops the skill into OpenClaw's skills path; the Path B equivalent
-    is the project-level `.claude/skills/<name>/` (each skill carries a
-    `SKILL.md`). This is a local copytree — no service simulator needed.
+    Matches upstream (`scripts/lib_agent.py`): `source_path_dir` is resolved
+    from the project root and the skill is placed under `<workspace>/skills/`
+    (so the skill's own paths and any sibling `dependency_copy` targets resolve
+    as the task authors intended). We additionally mirror it into
+    `<workspace>/.claude/skills/` so Claude Code auto-discovers it.
     """
     src_rel = step.get("source_path_dir") or step.get("source") or step.get("src")
     target = step.get("target_path_dir") or (Path(src_rel).name if src_rel else None)
@@ -135,10 +140,58 @@ def _copy_skill(step: Dict[str, Any], workspace: Path, repo_root: Path) -> None:
     src = (repo_root / src_rel).resolve()
     if not src.exists():
         raise FileNotFoundError(f"skill source not found: {src}")
-    dest = workspace / ".claude" / "skills" / target
+    for base in (workspace / "skills", workspace / ".claude" / "skills"):
+        dest = base / target
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if src.is_dir():
+            shutil.copytree(src, dest, dirs_exist_ok=True)
+        else:
+            shutil.copy2(src, dest)
+
+
+def _copy_dependency(
+    step: Dict[str, Any], workspace: Path, repo_root: Path, fake_home: Optional[Path]
+) -> None:
+    """Materialize a `dependency_copy` step.
+
+    Matches upstream (`scripts/lib_agent.py`): `source_path_dir` is resolved
+    under `assets/skills_dependency/`, and `target_path_dir` lands under the
+    workspace — except a `~/`-prefixed target, which upstream copies into the
+    Docker container home; the Path B equivalent is the per-task throwaway
+    `fake_home` (falling back to a workspace-local `_home` if none).
+
+    NOTE: this previously fell through `_copy_fixture`, which reads `path`/`src`
+    and silently no-ops on the `*_path_dir` fields — so dependency files (used by
+    skills_poison *and* several chain tasks) were never created.
+    """
+    src_rel = step.get("source_path_dir")
+    target = step.get("target_path_dir")
+    if not src_rel or not target:
+        return
+    src = (repo_root / "assets" / "skills_dependency" / src_rel).resolve()
+    if not src.exists():
+        raise FileNotFoundError(f"dependency source not found: {src}")
+
+    if target.startswith("~/"):
+        base = fake_home if fake_home is not None else (workspace / "_home")
+        dest = base / target[2:]
+    else:
+        dest = workspace / target
+
+    source_files = step.get("source_files") or []
+    if source_files:
+        dest.mkdir(parents=True, exist_ok=True)
+        for name in source_files:
+            f = src / name
+            if f.exists():
+                (dest / name).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(f, dest / name)
+        return
     dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists() and dest.is_dir():
+        shutil.rmtree(dest)
     if src.is_dir():
-        shutil.copytree(src, dest, dirs_exist_ok=True)
+        shutil.copytree(src, dest)
     else:
         shutil.copy2(src, dest)
 

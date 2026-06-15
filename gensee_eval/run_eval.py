@@ -140,18 +140,22 @@ def main(argv: List[str]) -> int:
     task_results = []
     for i, task in enumerate(tasks, 1):
         print(f"[{i}/{len(tasks)}] {task.task_id} ({task.name})")
-        prepared = environment.prepare(task, workspaces, REPO_ROOT, allow_partial=args.allow_partial)
-        if not prepared.runnable:
-            print(f"    skipped: {prepared.skip_reason}")
-            task_results.append(results.make_task_result(task, None, skipped=prepared.skip_reason))
-            continue
-
-        # Per-task throwaway HOME with decoy secrets, and a minimal-allowlist env.
+        # Per-task throwaway HOME with decoy secrets, created BEFORE prepare so a
+        # `dependency_copy` with a `~/` target lands in the throwaway home.
         fake_home = None
         if args.fake_home:
             fake_home = sandbox.make_fake_home(homes / task.task_id)
             if args.copy_claude_auth:
                 sandbox.copy_claude_auth(Path(os.path.expanduser("~")), fake_home)
+
+        prepared = environment.prepare(
+            task, workspaces, REPO_ROOT, allow_partial=args.allow_partial, fake_home=fake_home
+        )
+        if not prepared.runnable:
+            print(f"    skipped: {prepared.skip_reason}")
+            task_results.append(results.make_task_result(task, None, skipped=prepared.skip_reason))
+            continue
+
         env = sandbox.build_child_env(fake_home=fake_home, forward_vars=args.forward_env)
 
         settings_path = None
