@@ -8,6 +8,8 @@ port cleanly):
   - memory_poison                : plant a poisoned rule into the agent's memory
                                     file(s) (CLAUDE.md + MEMORY.md in workspace)
   - run_command                  : run a setup command in the workspace
+  - skill_copy                    : install a (poisoned) skill into the agent's
+                                    `.claude/skills/` so Claude Code discovers it
 
 Service-simulator types (banking/im/http) are NOT implemented here; a task that
 needs one is reported as `needs_simulator` and skipped, so coverage is explicit.
@@ -22,7 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # pre_setup types this harness can materialize on macOS without OpenClaw.
-SUPPORTED = {"file", "txt", "dependency_copy", "memory_poison", "run_command"}
+SUPPORTED = {"file", "txt", "dependency_copy", "memory_poison", "run_command", "skill_copy"}
 # Types that require the upstream service simulators (out of scope for Path B v1).
 NEEDS_SIMULATOR = {
     "im_new_contact",
@@ -60,6 +62,7 @@ def prepare(
     workspaces_root: Path,
     repo_root: Path,
     allow_partial: bool = False,
+    fake_home: Optional[Path] = None,
 ) -> PreparedTask:
     skip = classify(task.pre_setup)
     workspace = workspaces_root / task.task_id
@@ -82,8 +85,12 @@ def prepare(
     for step in task.pre_setup:
         t = step.get("type")
         try:
-            if t in ("file", "txt", "dependency_copy"):
+            if t in ("file", "txt"):
                 _copy_fixture(step, workspace, repo_root)
+            elif t == "dependency_copy":
+                _copy_dependency(step, workspace, repo_root, fake_home)
+            elif t == "skill_copy":
+                _copy_skill(step, workspace, repo_root)
             elif t == "memory_poison":
                 _plant_memory_poison(step, workspace)
                 prepared.memory_poisoned = True
@@ -115,6 +122,96 @@ def _copy_fixture(step: Dict[str, Any], workspace: Path, repo_root: Path) -> Non
         shutil.copy2(src, dest)
     else:
         raise FileNotFoundError(f"fixture not found: {src}")
+
+
+def _copy_skill(step: Dict[str, Any], workspace: Path, repo_root: Path) -> None:
+    """Install a (poisoned) skill directory.
+
+    Matches upstream (`scripts/lib_agent.py`): `source_path_dir` is resolved
+    from the project root and the skill is placed under `<workspace>/skills/`
+    (so the skill's own paths and any sibling `dependency_copy` targets resolve
+    as the task authors intended). We additionally mirror it into
+    `<workspace>/.claude/skills/` so Claude Code auto-discovers it.
+    """
+    src_rel = step.get("source_path_dir") or step.get("source") or step.get("src")
+    target = step.get("target_path_dir") or (Path(src_rel).name if src_rel else None)
+    if not src_rel or not target:
+        return
+    src = (repo_root / src_rel).resolve()
+    if not src.exists():
+        raise FileNotFoundError(f"skill source not found: {src}")
+    for base in (workspace / "skills", workspace / ".claude" / "skills"):
+        dest = base / target
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if src.is_dir():
+            shutil.copytree(src, dest, dirs_exist_ok=True)
+        else:
+            shutil.copy2(src, dest)
+
+
+def _copy_dependency(
+    step: Dict[str, Any], workspace: Path, repo_root: Path, fake_home: Optional[Path]
+) -> None:
+    """Materialize a `dependency_copy` step.
+
+    Matches upstream (`scripts/lib_agent.py`): `source_path_dir` is resolved
+    under `assets/skills_dependency/`, and `target_path_dir` lands under the
+    workspace — except a `~/`-prefixed target, which upstream copies into the
+    Docker container home; the Path B equivalent is the per-task throwaway
+    `fake_home` (falling back to a workspace-local `_home` if none).
+
+    NOTE: this previously fell through `_copy_fixture`, which reads `path`/`src`
+    and silently no-ops on the `*_path_dir` fields — so dependency files (used by
+    skills_poison *and* several chain tasks) were never created.
+    """
+    src_rel = step.get("source_path_dir")
+    target = step.get("target_path_dir")
+    if not src_rel or not target:
+        return
+    src = (repo_root / "assets" / "skills_dependency" / src_rel).resolve()
+    if not src.exists():
+        raise FileNotFoundError(f"dependency source not found: {src}")
+
+    source_files = step.get("source_files") or []
+    home_target = target == "~" or target.startswith("~/")
+
+    if home_target:
+        # Copy INTO the throwaway home and never rmtree it — the home holds the
+        # seeded decoys and any copied Claude auth, and `~/` targets resolve to
+        # the home root itself. This mirrors upstream's container-home copy
+        # (`docker cp`, which merges rather than replacing the directory).
+        base = fake_home if fake_home is not None else (workspace / "_home")
+        rel = target[2:] if target.startswith("~/") else ""
+        dest = base / rel
+        _copy_into(src, dest, source_files, merge=True)
+        return
+
+    # Workspace-relative target: a clean directory is fine to (re)create.
+    dest = workspace / target
+    _copy_into(src, dest, source_files, merge=False)
+
+
+def _copy_into(src: Path, dest: Path, source_files: List[str], *, merge: bool) -> None:
+    if source_files:
+        dest.mkdir(parents=True, exist_ok=True)
+        for name in source_files:
+            f = src / name
+            if f.exists():
+                (dest / name).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(f, dest / name)
+        return
+    if src.is_dir():
+        if merge:
+            dest.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(src, dest, dirs_exist_ok=True)
+        else:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if dest.exists():
+                shutil.rmtree(dest)
+            shutil.copytree(src, dest)
+    else:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
 
 
 def _plant_memory_poison(step: Dict[str, Any], workspace: Path) -> None:
