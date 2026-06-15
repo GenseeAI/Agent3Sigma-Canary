@@ -12,28 +12,43 @@ model that actually fails.
    --(OpenAI /v1/chat/completions)-->  Qwen OpenAI endpoint
    -->  cluster forwarder (gensee-397b)  -->  Qwen3.5-397B
 ```
-The Qwen OpenAI endpoint comes from `../remote-llm-api` (SSH reverse tunnel from
-the OpenClaw sandbox) or a direct `kubectl port-forward` of the forwarder.
+The Qwen OpenAI endpoint is the cluster forwarder reached via `kubectl
+port-forward` (same access pattern `platform-analysis` uses). `../remote-llm-api`
+(SSH reverse tunnel from the OpenClaw sandbox) is an alternative if the bench
+host has no cluster creds.
 
-## 1. Expose the Qwen OpenAI endpoint
-Either:
-- **remote-llm-api tunnel** (existing): from the OpenClaw sandbox run the
-  `remote-llm-api` skill (`init` + `start`); it exposes
-  `http://59.49.77.70:8888/v1/chat/completions` (keyless edge).
-- **kubectl port-forward** (if the bench host has cluster creds):
-  `kubectl port-forward -n staging svc/forwarder 9105:9105`
-  → `http://localhost:9105/forward/gensee-397b/v1`
+## ⚠️ Shared production GPUs — throttle and run off-peak
+This forwarder (`-n staging`, historical naming = the prod namespace) backs
+**openclaw production** on the **same GPUs**. The minted batch token **bypasses
+the forwarder's rate-limiting**, so nothing upstream protects prod from us —
+high concurrency causes prod `TimeoutError`s. Therefore:
+- Keep the agent run **sequential** (the harness already runs one `claude -p` at
+  a time — do NOT parallelize tasks).
+- Run **off-peak**.
+- Keep the **judge** on a different backend (Opus 4.6), so it doesn't pile onto
+  the same GPUs.
 
-Sanity-check it directly (OpenAI format):
+## 1. Reach the Qwen OpenAI endpoint (same pattern as platform-analysis)
 ```bash
-curl "$QWEN_OPENAI_BASE/chat/completions" -H 'Content-Type: application/json' \
-  -d '{"model":"Gensee/Qwen3.5-397B","messages":[{"role":"user","content":"hi"}],"max_tokens":16}'
+# Port-forward the forwarder. Plain port-forward DROPS under load, so loop it:
+nohup bash -c 'while true; do kubectl port-forward -n staging svc/forwarder 9105:9105; sleep 2; done' >/tmp/pf.log 2>&1 &
+export QWEN_OPENAI_BASE="http://localhost:9105/forward/gensee-397b/v1"
+
+# Mint a Fernet bearer (no static key). FERNET_KEY is in GCP Secret Manager.
+export FERNET_KEY=$(gcloud secrets versions access latest --secret=gshield-prod --project=gensee-deep-research | python3 -c 'import sys,json;print(json.load(sys.stdin)["FERNET_KEY"])')
+export GENSEE_API_KEY=$(python3 ../platform-analysis/scripts/mint_batch_token.py)
+
+# Sanity-check (expect HTTP 200):
+curl -sS -o /dev/null -w '%{http_code}\n' "$QWEN_OPENAI_BASE/chat/completions" \
+  -H "Authorization: Bearer $GENSEE_API_KEY" -H "Content-Type: application/json" \
+  -d '{"model":"Gensee/Qwen3.5-397B","messages":[{"role":"user","content":"ok"}],"max_tokens":5}'
 ```
+(The `mint_batch_token` payload may expire — re-mint if a long run starts 401ing.)
 
 ## 2. Start the Anthropic shim
+Reuses `QWEN_OPENAI_BASE` and `GENSEE_API_KEY` exported in step 1.
 ```bash
 pip install 'litellm[proxy]'
-export QWEN_OPENAI_BASE="http://59.49.77.70:8888/v1"   # or the port-forward URL
 litellm --config gensee_eval/qwen_proxy/litellm_config.yaml --port 4000
 ```
 
