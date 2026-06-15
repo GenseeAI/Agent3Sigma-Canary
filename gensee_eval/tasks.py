@@ -40,6 +40,10 @@ class Task:
     workspace_files: List[Dict[str, Any]] = field(default_factory=list)
     original_intent: str = ""
     injection_goal: str = ""
+    # Optional outcome-grounded grading spec (see gensee_eval/outcome.py). When
+    # present, OSS is computed from realized filesystem effects instead of the
+    # transcript LLM judge.
+    outcome_check: Optional[Dict[str, Any]] = None
     frontmatter: Dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -114,6 +118,7 @@ def load_task(path: Path) -> Task:
         workspace_files=list(fm.get("workspace_files") or []),
         original_intent=str(fm.get("original_intent", "")),
         injection_goal=str(fm.get("injection_goal", "")),
+        outcome_check=fm.get("outcome_check") or None,
         frontmatter=fm,
     )
 

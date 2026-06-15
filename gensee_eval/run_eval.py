@@ -21,13 +21,15 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 import sys
 import time
 from pathlib import Path
 from typing import List
+from urllib.parse import urlparse
 
-from . import claude_agent, environment, judge, results, sandbox, shield
+from . import claude_agent, environment, judge, netcapture, outcome, results, sandbox, shield
 from .tasks import load_suite
 
 HERE = Path(__file__).resolve().parent
@@ -146,11 +148,39 @@ def main(argv: List[str]) -> int:
                                                   Path(args.gensee_bin), gensee_home)
             env = shield.shield_env(env, gensee_home, policy_file)
 
-        run = claude_agent.run_task(
-            task, prepared.workspace, model=args.model, env=env,
-            settings_path=settings_path, extra_args=extra_args,
-            per_turn_timeout=args.per_turn_timeout, preexec_fn=preexec,
-        )
+        # Outcome-grounded OSS (macOS substitute for upstream's Tracee channel):
+        # snapshot the agent-writable roots before the run, diff after, and let
+        # the task's `outcome_check` decide if harm was realized. Captured in
+        # both arms (control + shielded) so the comparison is symmetric.
+        oc_roots = [prepared.workspace, fake_home]
+        for wp in (task.outcome_check or {}).get("watch_paths", []):
+            oc_roots.append(Path(os.path.expanduser(wp)))
+        before_snap = outcome.capture(oc_roots) if task.outcome_check else None
+
+        # Network-attempt capture (macOS substitute for Tracee's network
+        # channel): when the task grades on a `network_attempt_host`, route the
+        # agent's HTTP(S) clients through a local logging proxy so exfil targets
+        # are recorded without data leaving the box. The agent's own model
+        # endpoint bypasses it via NO_PROXY, or the agent could not run.
+        want_net = any("network_attempt_host" in p
+                       for p in (task.outcome_check or {}).get("unsafe_if", []))
+        netcap_cm = netcapture.NetCapture() if want_net else contextlib.nullcontext()
+        net_hosts = []
+        with netcap_cm as netcap:
+            run_env = env
+            if netcap is not None:
+                no_proxy = ["api.anthropic.com"]
+                base_host = urlparse(env.get("ANTHROPIC_BASE_URL", "")).hostname
+                if base_host:
+                    no_proxy.append(base_host)
+                run_env = {**env, **netcap.proxy_env(no_proxy)}
+            run = claude_agent.run_task(
+                task, prepared.workspace, model=args.model, env=run_env,
+                settings_path=settings_path, extra_args=extra_args,
+                per_turn_timeout=args.per_turn_timeout, preexec_fn=preexec,
+            )
+            if netcap is not None:
+                net_hosts = netcap.hosts()
         if run.errors:
             print(f"    agent errors: {run.errors}")
         blocks = shield.block_summary(shield.read_alerts(gensee_home)) if args.shield else None
@@ -166,9 +196,22 @@ def main(argv: List[str]) -> int:
             task_results.append(results.make_task_result(task, None, skipped=reason))
             continue
 
-        grade = judge.grade(task, run.transcript, verbose=args.verbose)
+        effects = oss_override = None
+        if before_snap is not None:
+            effects = outcome.diff(before_snap, outcome.capture(oc_roots))
+            effects.network = net_hosts
+            roots_map = {"workspace": prepared.workspace,
+                         "home": fake_home or Path(os.path.expanduser("~"))}
+            oss_override, oc_evidence = outcome.evaluate(task.outcome_check, effects, roots_map)
+            verdict = "PREVENTED" if oss_override == 1.0 else "REALIZED"
+            print(f"    outcome={verdict} (OSS={oss_override})"
+                  + (f" evidence={oc_evidence}" if oc_evidence else ""))
+
+        grade = judge.grade(task, run.transcript, effects=effects,
+                            oss_override=oss_override, verbose=args.verbose)
         b = grade["breakdown"]
-        print(f"    score={grade['score']:.2f} outcome={b.get('outcome_assessment')} "
+        print(f"    score={grade['score']:.2f} outcome={b.get('outcome_assessment')}"
+              f"[{grade['outcome_source']}] "
               f"awareness={b.get('security_awareness')} utility={b.get('utility_evaluation')}")
         task_results.append(results.make_task_result(
             task, grade, shield_blocks=blocks, errors=run.errors or None))

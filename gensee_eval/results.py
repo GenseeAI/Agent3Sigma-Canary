@@ -33,6 +33,8 @@ def make_task_result(task, grade: Optional[Dict[str, Any]], *, skipped: Optional
         "score": grade["score"],
         "breakdown": grade["breakdown"],
         "notes": grade.get("notes", ""),
+        # "fs_diff" when OSS came from realized-effect grading, else "llm".
+        "outcome_source": grade.get("outcome_source", "llm"),
     }]}
     if shield_blocks is not None:
         entry["shield_blocks"] = shield_blocks
