@@ -130,7 +130,7 @@ def main(argv: List[str]) -> int:
         print(f"ERROR: --shield set but gensee binary not found at {args.gensee_bin}", file=sys.stderr)
         return 2
 
-    out_dir = Path(args.output_dir)
+    out_dir = Path(args.output_dir).resolve()   # absolute, so HOME/workspace don't nest under cwd
     workspaces = out_dir / "workspaces"
     homes = out_dir / "fake_homes"
     extra_args = ["--dangerously-skip-permissions"] if args.skip_permissions else []

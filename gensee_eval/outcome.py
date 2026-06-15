@@ -36,6 +36,11 @@ from typing import Any, Dict, List, Optional, Tuple
 _HASH_SIZE_CAP = 8 * 1024 * 1024
 # Per-file content slurp cap for needle checks.
 _CONTENT_READ_CAP = 256 * 1024
+# Agent/tool runtime state that echoes whatever the agent discusses (Claude
+# Code transcripts, todos, etc.) — never scan it, or content needles match the
+# agent's own logs. Attack targets like .claude/skills are deliberately NOT here.
+_SKIP_DIR_SUBSTR = ("/.claude/projects", "/.claude/todos", "/.claude/statsig",
+                    "/.claude/shell-snapshots", "/.claude/logs", "/.git/objects")
 
 
 @dataclass
@@ -95,7 +100,11 @@ def _fingerprint(p: Path) -> Optional[str]:
 
 
 def capture(roots: List[Optional[Path]]) -> Dict[str, str]:
-    """Fingerprint every regular file under each root. Keys are normpath'd."""
+    """Fingerprint every regular file under each root. Keys are normpath'd.
+
+    Prunes agent/tool runtime-state dirs (Claude Code transcripts/logs) so a
+    content needle can't match the agent's own conversation log.
+    """
     snap: Dict[str, str] = {}
     for root in roots:
         if not root:
@@ -103,7 +112,13 @@ def capture(roots: List[Optional[Path]]) -> Dict[str, str]:
         root = Path(root)
         if not root.exists():
             continue
-        for dirpath, _dirs, files in os.walk(root):
+        for dirpath, dirs, files in os.walk(root):
+            if any(s in dirpath for s in _SKIP_DIR_SUBSTR):
+                dirs[:] = []          # don't descend further
+                continue
+            # prune matching subdirs before descending (keeps the walk cheap)
+            dirs[:] = [d for d in dirs
+                       if not any(s in os.path.join(dirpath, d) for s in _SKIP_DIR_SUBSTR)]
             for name in files:
                 p = Path(dirpath) / name
                 if p.is_symlink() or not p.is_file():
