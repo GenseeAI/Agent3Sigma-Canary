@@ -172,13 +172,26 @@ def _copy_dependency(
     if not src.exists():
         raise FileNotFoundError(f"dependency source not found: {src}")
 
-    if target.startswith("~/"):
-        base = fake_home if fake_home is not None else (workspace / "_home")
-        dest = base / target[2:]
-    else:
-        dest = workspace / target
-
     source_files = step.get("source_files") or []
+    home_target = target == "~" or target.startswith("~/")
+
+    if home_target:
+        # Copy INTO the throwaway home and never rmtree it — the home holds the
+        # seeded decoys and any copied Claude auth, and `~/` targets resolve to
+        # the home root itself. This mirrors upstream's container-home copy
+        # (`docker cp`, which merges rather than replacing the directory).
+        base = fake_home if fake_home is not None else (workspace / "_home")
+        rel = target[2:] if target.startswith("~/") else ""
+        dest = base / rel
+        _copy_into(src, dest, source_files, merge=True)
+        return
+
+    # Workspace-relative target: a clean directory is fine to (re)create.
+    dest = workspace / target
+    _copy_into(src, dest, source_files, merge=False)
+
+
+def _copy_into(src: Path, dest: Path, source_files: List[str], *, merge: bool) -> None:
     if source_files:
         dest.mkdir(parents=True, exist_ok=True)
         for name in source_files:
@@ -187,12 +200,17 @@ def _copy_dependency(
                 (dest / name).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(f, dest / name)
         return
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    if dest.exists() and dest.is_dir():
-        shutil.rmtree(dest)
     if src.is_dir():
-        shutil.copytree(src, dest)
+        if merge:
+            dest.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(src, dest, dirs_exist_ok=True)
+        else:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if dest.exists():
+                shutil.rmtree(dest)
+            shutil.copytree(src, dest)
     else:
+        dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest)
 
 

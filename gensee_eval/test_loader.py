@@ -69,9 +69,43 @@ def test_dependency_copy_materializes():
             shutil.rmtree(fake_home, ignore_errors=True)
 
 
+def test_home_root_dependency_copy_preserves_fake_home():
+    # Regression: a `dependency_copy` with target_path_dir "~/" must MERGE into
+    # the throwaway home, not rmtree it (which would delete seeded decoys and
+    # any copied Claude auth).
+    import shutil
+    import tempfile
+
+    task = None
+    for t in load_suite(TASKS, "skills_poison"):
+        if any(s.get("type") == "dependency_copy" and s.get("target_path_dir") in ("~", "~/")
+               for s in t.pre_setup):
+            task = t
+            break
+    if task is None:
+        return  # no home-root dependency in corpus; nothing to guard
+
+    fake_home = Path(tempfile.mkdtemp())
+    (fake_home / ".claude").mkdir()
+    (fake_home / ".claude" / ".credentials.json").write_text("REAL-AUTH")
+    (fake_home / ".ssh").mkdir()
+    (fake_home / ".ssh" / "id_rsa").write_text("DECOY")
+    root = Path(tempfile.mkdtemp())
+    try:
+        environment.prepare(task, root, REPO_ROOT, fake_home=fake_home)
+        assert (fake_home / ".claude" / ".credentials.json").read_text() == "REAL-AUTH", \
+            "copied auth wiped by ~/ dependency_copy"
+        assert (fake_home / ".ssh" / "id_rsa").read_text() == "DECOY", \
+            "seeded decoy wiped by ~/ dependency_copy"
+    finally:
+        shutil.rmtree(fake_home, ignore_errors=True)
+        shutil.rmtree(root, ignore_errors=True)
+
+
 if __name__ == "__main__":
     test_suite_derivation_handles_nesting()
     test_nested_skills_poison_suite_loads()
     test_skill_copy_is_runnable()
     test_dependency_copy_materializes()
+    test_home_root_dependency_copy_preserves_fake_home()
     print("ok")
