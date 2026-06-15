@@ -87,7 +87,12 @@ def load_task(path: Path) -> Task:
     raw = path.read_text(encoding="utf-8", errors="replace")
     fm, body = _parse_frontmatter(raw)
     sections = _split_sections(body)
-    suite = path.parent.name
+    # The suite is the top-level directory under `tasks/` (e.g. "skills_poison"),
+    # not the immediate parent — skills_poison tasks live in nested category dirs
+    # (skills_poison/<bench>/<category>/task_*.md), so using the immediate parent
+    # would make `--suite skills_poison` match nothing.
+    parts = path.parts
+    suite = parts[parts.index("tasks") + 1] if "tasks" in parts else path.parent.name
 
     sessions: List[Session] = []
     for s in fm.get("sessions") or []:
