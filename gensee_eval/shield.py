@@ -52,11 +52,18 @@ def read_alerts(gensee_home: Path) -> List[Dict[str, Any]]:
         conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
-            "SELECT rule_id, action, severity, path, message FROM alerts ORDER BY created_at"
+            # ORDER BY rowid (insertion order) — robust to the timestamp column
+            # name. The alerts table's column is `observed_at_ms`, NOT
+            # `created_at`; ordering by created_at threw and the bare except
+            # below silently returned [], so every shielded run reported
+            # block=0 (the shield looked like it never fired).
+            "SELECT rule_id, action, severity, path, message FROM alerts ORDER BY rowid"
         ).fetchall()
         conn.close()
         return [dict(r) for r in rows]
-    except sqlite3.Error:
+    except sqlite3.Error as exc:
+        import sys
+        print(f"    [shield] read_alerts failed for {db}: {exc}", file=sys.stderr)
         return []
 
 
