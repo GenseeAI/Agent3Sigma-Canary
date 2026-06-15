@@ -83,7 +83,9 @@ def run_turn(
     if resume:
         cmd += ["--resume", resume]
     if settings_path:
-        cmd += ["--settings", str(settings_path)]
+        # Absolute: claude runs with cwd=workspace, so a relative --settings
+        # path would resolve under the workspace and not be found.
+        cmd += ["--settings", str(Path(settings_path).resolve())]
     cmd += extra_args
 
     try:

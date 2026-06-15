@@ -20,7 +20,11 @@ HOOK_EVENTS = ("UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop")
 
 
 def make_settings(gensee_bin: Path, gensee_home: Path) -> Dict[str, Any]:
-    cmd = f"GENSEE_HOME={gensee_home} {gensee_bin} hook claude-code"
+    # The hook command runs with the agent's cwd (the per-task workspace), so the
+    # binary path and GENSEE_HOME must be absolute — otherwise the hook fails to
+    # exec / writes its store under the workspace, and the shield silently sees
+    # nothing.
+    cmd = f"GENSEE_HOME={gensee_home.resolve()} {gensee_bin.resolve()} hook claude-code"
     hook = {"matcher": "*", "hooks": [{"type": "command", "command": cmd}]}
     return {"hooks": {event: [hook] for event in HOOK_EVENTS}}
 
@@ -33,9 +37,9 @@ def write_settings(path: Path, gensee_bin: Path, gensee_home: Path) -> Path:
 
 def shield_env(base_env: Dict[str, str], gensee_home: Path, policy_file: Optional[Path]) -> Dict[str, str]:
     env = dict(base_env)
-    env["GENSEE_HOME"] = str(gensee_home)
+    env["GENSEE_HOME"] = str(gensee_home.resolve())
     if policy_file:
-        env["GENSEE_POLICY_FILE"] = str(policy_file)
+        env["GENSEE_POLICY_FILE"] = str(policy_file.resolve())
     return env
 
 
