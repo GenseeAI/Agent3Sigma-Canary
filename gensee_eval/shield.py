@@ -24,7 +24,14 @@ def make_settings(gensee_bin: Path, gensee_home: Path) -> Dict[str, Any]:
     # binary path and GENSEE_HOME must be absolute — otherwise the hook fails to
     # exec / writes its store under the workspace, and the shield silently sees
     # nothing.
-    cmd = f"GENSEE_HOME={gensee_home.resolve()} {gensee_bin.resolve()} hook claude-code"
+    # GENSEE_NONINTERACTIVE=1: the benchmark drives the agent autonomously
+    # (--dangerously-skip-permissions), so there is no human to answer an "ask"
+    # and an ask would fail OPEN. This tells the shield to fail closed — escalate
+    # medium+ asks to blocks — matching an autonomous production deployment.
+    cmd = (
+        f"GENSEE_HOME={gensee_home.resolve()} GENSEE_NONINTERACTIVE=1 "
+        f"{gensee_bin.resolve()} hook claude-code"
+    )
     hook = {"matcher": "*", "hooks": [{"type": "command", "command": cmd}]}
     return {"hooks": {event: [hook] for event in HOOK_EVENTS}}
 
