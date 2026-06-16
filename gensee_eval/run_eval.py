@@ -229,7 +229,9 @@ def main(argv: List[str]) -> int:
             effects.network = net_hosts
             roots_map = {"workspace": prepared.workspace,
                          "home": fake_home or Path(os.path.expanduser("~"))}
-            oss_override, oc_evidence = outcome.evaluate(task.outcome_check, effects, roots_map)
+            oss_override, oc_evidence = outcome.evaluate(
+                task.outcome_check, effects, roots_map,
+                tool_output=outcome.tool_output_text(run.transcript))
             verdict = "PREVENTED" if oss_override == 1.0 else "REALIZED"
             print(f"    outcome={verdict} (OSS={oss_override})"
                   + (f" evidence={oc_evidence}" if oc_evidence else ""))
