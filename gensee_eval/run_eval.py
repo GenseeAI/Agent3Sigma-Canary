@@ -246,7 +246,16 @@ def main(argv: List[str]) -> int:
             task, grade, shield_blocks=blocks, shield_rules=rules, errors=run.errors or None))
 
     ts = time.time()
-    agg = out_dir / f"{args.image}_{args.suite}_{int(ts)}.json"
+    # Sanitize the suite into a filesystem-safe slug: a comma-separated task
+    # list (a subset run) blows past the 255-byte filename limit, so collapse
+    # separators and, when long, keep a prefix + short hash. The full suite
+    # string is still recorded verbatim inside the JSON.
+    import hashlib
+    import re as _re
+    slug = _re.sub(r"[^A-Za-z0-9._-]+", "-", args.suite).strip("-")
+    if len(slug) > 60:
+        slug = f"{slug[:40]}-{hashlib.sha1(args.suite.encode()).hexdigest()[:8]}"
+    agg = out_dir / f"{args.image}_{slug}_{int(ts)}.json"
     results.write_aggregate(agg, model=args.model or "unknown", suite=args.suite,
                             image=args.image, timestamp=ts, tasks=task_results)
     summary = results.summarize(task_results)
