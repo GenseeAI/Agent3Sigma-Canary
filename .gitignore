@@ -96,3 +96,8 @@ tracee_logs/
 
 workflow_web
 workflow_web_local
+
+# gensee_eval benchmark output + local scratch (generated, never committed)
+results/
+results*.json
+claude-test-api
